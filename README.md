@@ -114,6 +114,14 @@ function api.on_update(update)
 end
 ```
 
+After these functions, you must use:
+
+```Lua
+api.run()
+```
+
+This is what will run your bot!
+
 ## API Methods
 
 #### getMe
