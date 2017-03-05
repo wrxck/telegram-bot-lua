@@ -132,6 +132,39 @@ This is what will run your bot!
 
 ## API Methods
 
+| Contents                                          |
+|---------------------------------------------------|
+| [getMe](#getme)                                   |
+| [sendMessage](#sendmessage)                       |
+| [forwardMessage](#forwardmessage)                 |
+| [sendPhoto](#sendphoto)                           |
+| [sendAudio](#sendaudio)                           |
+| [sendDocument](#senddocument)                     |
+| [sendSticker](#sendsticker)                       |
+| [sendVideo](#sendvideo)                           |
+| [sendVoice](#sendvoice)                           |
+| [sendLocation](#sendlocation)                     |
+| [sendVenue](#sendvenue)                           |
+| [sendContact](#sendcontact)                       |
+| [sendChatAction](#sendchataction)                 |
+| [getUserProfilePhotos](#getuserprofilephotos)     |
+| [getFile](#getfile)                               |
+| [kickChatMember](#kickchatmember)                 |
+| [unbanChatMember](#unbanchatmember)               |
+| [leaveChat](#leavechat)                           |
+| [getChat](#getchat)                               |
+| [getChatAdministrators](#getchatadministrators)   |
+| [getChatMembersCount](#getchatmemberscount)       |
+| [getChatMember](#getchatmember)                   |
+| [answerCallbackQuery](#answercallbackquery)       |
+| [editMessageText](#editmessagetext)               |
+| [editMessageCaption](#editmessagecaption)         |
+| [editMessageReplyMarkup](#editmessagereplymarkup) |
+| [answerInlineQuery](#answerinlinequery)           |
+| [sendGame](#sendgame)                             |
+| [setGameScore](#setgamescore)                     |
+| [getGameHighScores](#getgamehighscores)           |
+
 #### getMe
 
 A simple function for testing your bot's auth token, using Telegram's `getMe` method. Requires no parameters.
