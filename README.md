@@ -4,6 +4,14 @@ A feature-filled Telegram bot API library written in Lua, created by [Matt](http
 
 This library was written to complement the "[mattata](https://github.com/wrxck/mattata)" project, allowing anybody to create their own Telegram bot with little coding knowledge needed (that is, except a basic knowledge of Lua and the inspiration provided by [@mattatabot](https://t.me/mattatabot) and this library).
 
+| Contents                                            |
+|-----------------------------------------------------|
+| [Installation](#installation)                       |
+| [Update Handling](#update-handling)                 |
+| [API Methods](#api-methods)                         |
+| [Building Inline Results](#building-inline-results) |
+| [Building Reply Markup](#building-reply-markup)     |
+
 ## Installation
 
 To install this library, make sure you have Lua 5.3 and LuaRocks installed, then run `luarocks install telegram-bot-lua`.
