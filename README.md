@@ -754,3 +754,177 @@ api.get_game_high_scores(
 | user\_id            | Integer | Yes        | Target user id                                                                             |
 | message\_id         | Integer | Optional   | Required if inline\_message\_id is not specified. Identifier of the sent message           |
 | inline\_message\_id | String  | Optional   | Required if chat\_id and message\_id are not specified. Identifier of the inline message   |
+
+## Building Inline Results
+
+There are quite a few types of inline results:
+
+* [InlineQueryResultCachedAudio](https://core.telegram.org/bots/api#InlineQueryResultCachedAudio)
+* [InlineQueryResultCachedDocument](https://core.telegram.org/bots/api#InlineQueryResultCachedDocument)
+* [InlineQueryResultCachedGif](https://core.telegram.org/bots/api#InlineQueryResultCachedGif)
+* [InlineQueryResultCachedMpeg4Gif](https://core.telegram.org/bots/api#InlineQueryResultCachedMpeg4Gif)
+* [InlineQueryResultCachedPhoto](https://core.telegram.org/bots/api#InlineQueryResultCachedPhoto)
+* [InlineQueryResultCachedSticker](https://core.telegram.org/bots/api#InlineQueryResultCachedSticker)
+* [InlineQueryResultCachedVideo](https://core.telegram.org/bots/api#InlineQueryResultCachedVideo)
+* [InlineQueryResultCachedVoice](https://core.telegram.org/bots/api#InlineQueryResultCachedVoice)
+* [InlineQueryResultArticle](https://core.telegram.org/bots/api#InlineQueryResultArticle)
+* [InlineQueryResultAudio](https://core.telegram.org/bots/api#InlineQueryResultAudio)
+* [InlineQueryResultContact](https://core.telegram.org/bots/api#InlineQueryResultContact)
+* [InlineQueryResultGame](https://core.telegram.org/bots/api#InlineQueryResultGame)
+* [InlineQueryResultDocument](https://core.telegram.org/bots/api#InlineQueryResultDocument)
+* [InlineQueryResultGif](https://core.telegram.org/bots/api#InlineQueryResultGif)
+* [InlineQueryResultLocation](https://core.telegram.org/bots/api#InlineQueryResultLocation)
+* [InlineQueryResultMpeg4Gif](https://core.telegram.org/bots/api#InlineQueryResultMpeg4Gif)
+* [InlineQueryResultPhoto](https://core.telegram.org/bots/api#InlineQueryResultPhoto)
+* [InlineQueryResultVenue](https://core.telegram.org/bots/api#InlineQueryResultVenue)
+* [InlineQueryResultVideo](https://core.telegram.org/bots/api#InlineQueryResultVideo)
+* [InlineQueryResultVoice](https://core.telegram.org/bots/api#InlineQueryResultVoice)
+
+There is one global function for building an inline result:
+
+```Lua
+api.inline_result()
+```
+
+You then build the inline result using Lua methods. Each inline query result has a table of fields - some which are required, and some which are optional. The `api.inline_result()` function has a method for every single parameter, where the method name is the parameter name. To build an inline articule result, you'd use:
+
+```Lua
+api.inline_result():type('article'):id(1):title('Title'):description('Description'):input_message_content(
+    api.input_text_message_content('Text')
+)
+```
+
+You'll notice a new function inside the input\_message\_content method - this is one of four functions for building the input\_message\_content parameter. This is optional, but it saves you from manually encoding it in JSON.
+
+This object represents the content of a message to be sent as a result of an inline query. Telegram clients currently support the following 4 types:
+
+* InputTextMessageContent
+* InputLocationMessageContent
+* InputVenueMessageContent
+* InputContactMessageContent
+
+To build the InputTextMessageContent object, use the function:
+
+```Lua
+api.input_text_message_content(
+    text,
+    parse_mode,
+    disable_web_page_preview
+)
+```
+To build the InputLocationMessageContent object, use the function:
+
+```Lua
+api.input_location_message_content(
+    latitude,
+    longitude
+)
+```
+
+To build the InputVenueMessageContent object, use the function:
+
+```Lua
+api.input_venue_message_content(
+    latitude,
+    longitude,
+    title,
+    address,
+    foursquare_id
+)
+```
+
+And to build the InputContactMessageContent object, use the function:
+
+```Lua
+api.input_contact_message_content(
+    phone_number,
+    first_name,
+    last_name
+)
+```
+
+## Building Reply Markup
+
+There are functions to build keyboards and inline keyboards in this API. To build an inline keyboard, use the following function:
+
+```Lua
+api.inline_keyboard()
+```
+
+For each row of buttons, you need to use the `row()` method on the above function, with the `api.row()` function inside it, like this:
+
+```Lua
+api.inline_keyboard():row(
+    api.row()
+)
+```
+
+But wait, this keyboard doesn't have any buttons yet! To add buttons, you need to decide which type of button you are going to use - there are currently 4:
+
+* url
+* callback\_data
+* switch\_inline\_query
+* switch\_inline\_query\_current\_chat
+
+To build a URL button, you need to use the following method with the `api.inline_keyboard()` and the `api.row()` functions:
+
+```Lua
+api.inline_keyboard():row(
+    api.row():url_button(
+        text,
+        url
+    )
+)
+```
+
+To build a callback data button, you need to use the following method in the same way as previously shown with the URL button:
+
+```Lua
+api.inline_keyboard():row(
+    api.row():callback_data_button(
+        text,
+        callback_data
+    )
+)
+```
+
+To build a switch inline query button, you need to use the following method:
+
+```Lua
+api.inline_keyboard():row(
+    api.row():switch_inline_query_button(
+        text,
+        switch_inline_query
+    )
+)
+```
+
+To build a switch inline query current chat button, you need to use the following method:
+
+```Lua
+api.inline_keyboard():row(
+    api.row():switch_inline_query_current_chat_button(
+        text,
+        switch_inline_query_current_chat
+    )
+)
+```
+
+To add more buttons to the same row, you need to use the button method again on the `api.row()` function. If I wanted to have an inline keyboard with 2 buttons on the first row and 1 button on the second row, where all of the buttons are URL buttons that display the text "Google" and have the URL "https://www.google.com/", it would look like this:
+
+```Lua
+api.inline_keyboard():row(
+    api.row():url_button(
+        'Google',
+        'https://www.google.com/'
+    ):url_button(
+        'Google',
+        'https://www.google.com/'
+    )
+):row(
+    api.row():url_button(
+        'Google',
+        'https://www.google.com/'
+    )
+)
+```
