@@ -141,6 +141,9 @@ function api.send_message(message, text, parse_mode, disable_web_page_preview, d
     if type(message) == 'table' then
         chat_id = message.chat.id
     end
+    if type(parse_mode) == 'boolean' and parse_mode == true then
+        parse_mode = 'markdown'
+    end
     return api.request(
         string.format(
             'https://api.telegram.org/bot%s/sendMessage',
@@ -164,6 +167,9 @@ function api.send_reply(message, text, parse_mode, disable_web_page_preview, rep
     end
     if type(reply_markup) == 'table' then
         reply_markup = json.encode(reply_markup)
+    end
+    if type(parse_mode) == 'boolean' and parse_mode == true then
+        parse_mode = 'markdown'
     end
     return api.request(
         string.format(
@@ -565,6 +571,9 @@ function api.edit_message_text(chat_id, message_id, text, parse_mode, disable_we
     if type(reply_markup) == 'table' then
         reply_markup = json.encode(reply_markup)
     end
+    if type(parse_mode) == 'boolean' and parse_mode == true then
+        parse_mode = 'markdown'
+    end
     return api.request(
         string.format(
             'https://api.telegram.org/bot%s/editMessageText',
@@ -760,6 +769,9 @@ function api.run(limit, timeout)
 end
 
 function api.input_text_message_content(message_text, parse_mode, disable_web_page_preview, encoded)
+    if type(parse_mode) == 'boolean' and parse_mode == true then
+        parse_mode = 'markdown'
+    end
     local input_message_content = {
         ['message_text'] = tostring(message_text),
         ['parse_mode'] = parse_mode,
@@ -817,6 +829,9 @@ end
 function api.send_inline_article(inline_query_id, title, description, message_text, parse_mode, reply_markup)
     description = description or title
     message_text = message_text or description
+    if type(parse_mode) == 'boolean' and parse_mode == true then
+        parse_mode = 'markdown'
+    end
     return api.answer_inline_query(
         inline_query_id,
         json.encode(
