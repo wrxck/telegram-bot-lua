@@ -10,10 +10,11 @@ local multipart = require('multipart-post')
 local ltn12 = require('ltn12')
 local json = require('dkjson')
 
-function api.configure(token)
+function api.configure(token, debug)
     if not token or type(token) ~= 'string' then
         token = nil
     end
+    api.debug = debug and true or false
     api.token = assert(
         token,
         'Please specify your bot API token you received from @BotFather!'
@@ -35,7 +36,16 @@ function api.request(endpoint, parameters, file)
     for k, v in pairs(parameters) do
         parameters[k] = tostring(v)
     end
-    print(json.encode(parameters))
+    if api.debug then
+        print(
+            json.encode(
+                parameters,
+                {
+                    ['indent'] = true
+                }
+            )
+        )
+    end
     if file and next(file) ~= nil then
         local file_type, file_name = next(file)
         if not file_name then
@@ -226,7 +236,6 @@ function api.send_photo(chat_id, photo, caption, disable_notification, reply_to_
 end
 
 function api.send_audio(chat_id, audio, caption, duration, performer, title, disable_notification, reply_to_message_id, reply_markup) -- https://core.telegram.org/bots/api#sendaudio
-
     if type(reply_markup) == 'table' then
         reply_markup = json.encode(reply_markup)
     end
@@ -252,7 +261,6 @@ function api.send_audio(chat_id, audio, caption, duration, performer, title, dis
 end
 
 function api.send_document(chat_id, document, caption, disable_notification, reply_to_message_id, reply_markup) -- https://core.telegram.org/bots/api#senddocument
-
     if type(reply_markup) == 'table' then
         reply_markup = json.encode(reply_markup)
     end
@@ -275,7 +283,6 @@ function api.send_document(chat_id, document, caption, disable_notification, rep
 end
 
 function api.send_sticker(chat_id, sticker, disable_notification, reply_to_message_id, reply_markup) -- https://core.telegram.org/bots/api#sendsticker
-
     if type(reply_markup) == 'table' then
         reply_markup = json.encode(reply_markup)
     end
@@ -297,7 +304,6 @@ function api.send_sticker(chat_id, sticker, disable_notification, reply_to_messa
 end
 
 function api.send_video(chat_id, video, duration, width, height, caption, disable_notification, reply_to_message_id, reply_markup) -- https://core.telegram.org/bots/api#sendvideo
-
     if type(reply_markup) == 'table' then
         reply_markup = json.encode(reply_markup)
     end
@@ -323,7 +329,6 @@ function api.send_video(chat_id, video, duration, width, height, caption, disabl
 end
 
 function api.send_voice(chat_id, voice, caption, duration, disable_notification, reply_to_message_id, reply_markup) -- https://core.telegram.org/bots/api#sendvoice
-
     if type(reply_markup) == 'table' then
         reply_markup = json.encode(reply_markup)
     end
@@ -347,7 +352,6 @@ function api.send_voice(chat_id, voice, caption, duration, disable_notification,
 end
 
 function api.send_location(chat_id, latitude, longitude, disable_notification, reply_to_message_id, reply_markup) -- https://core.telegram.org/bots/api#sendlocation
-
     if type(reply_markup) == 'table' then
         reply_markup = json.encode(reply_markup)
     end
@@ -368,7 +372,6 @@ function api.send_location(chat_id, latitude, longitude, disable_notification, r
 end
 
 function api.send_venue(chat_id, latitude, longitude, title, address, foursquare_id, disable_notification, reply_to_message_id, reply_markup) -- https://core.telegram.org/bots/api#sendvenue
-
     if type(reply_markup) == 'table' then
         reply_markup = json.encode(reply_markup)
     end
