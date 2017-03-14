@@ -1,6 +1,6 @@
 rockspec_format = "1.0.2"
 package = "telegram-bot-lua"
-version = "1.0.2-0"
+version = "1.0.2-1"
 
 source = {
     url = "git://github.com/wrxck/telegram-bot-lua.git",
@@ -17,7 +17,8 @@ description = {
 }
 
 supported_platforms = {
-    "linux"
+    "linux",
+    "macosx"
 }
 
 dependencies = {
