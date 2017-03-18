@@ -59,14 +59,14 @@ function tools.commands_meta:command(command)
     table.insert(
         self.table,
         string.format(
-            '^[%%/%%!%%$%%^%%?%%&%%%%]%s$',
+            '^[/!#]%s$',
             command
         )
     )
     table.insert(
         self.table,
         string.format(
-            '^[%%/%%!%%$%%^%%?%%&%%%%]%s@%s$',
+            '^[/!#]%s@%s$',
             command,
             self.username
         )
@@ -74,14 +74,14 @@ function tools.commands_meta:command(command)
     table.insert(
         self.table,
         string.format(
-            '^[%%/%%!%%$%%^%%?%%&%%%%]%s%%s+[^%%s]*',
+            '^[/!#]%s%%s+[^%%s]*',
             command
         )
     )
     table.insert(
         self.table,
         string.format(
-            '^[%%/%%!%%$%%^%%?%%&%%%%]%s@%s%%s+[^%%s]*',
+            '^[/!#]%s@%s%%s+[^%%s]*',
             command,
             self.username
         )
@@ -94,7 +94,7 @@ function tools.commands(username, command_table)
         {},
         tools.commands_meta
     )
-    self.username = username:lower()
+    self.username = username
     self.table = command_table or {}
     return self
 end
