@@ -1,6 +1,6 @@
-rockspec_format = "1.0.3"
+rockspec_format = "1.0.4"
 package = "telegram-bot-lua"
-version = "1.0.3-0"
+version = "1.0.4-0"
 
 source = {
     url = "git://github.com/wrxck/telegram-bot-lua.git",
@@ -28,7 +28,8 @@ dependencies = {
     "lpeg >= 1.0.1-1",
     "luasec >= 0.6-1",
     "luasocket >= 3.0rc1-2",
-    "multipart-post >= 1.1-1"
+    "multipart-post >= 1.1-1",
+    "luautf8 >= 0.1.1-1"
 }
 
 build = {

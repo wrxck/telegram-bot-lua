@@ -9,6 +9,7 @@ local api = require('telegram-bot-lua.core')
 local https = require('ssl.https')
 local http = require('socket.http')
 local ltn12 = require('ltn12')
+local utf8 = utf8 or require('lua-utf8') -- Lua 5.2 compatibility.
 
 function tools.comma_value(amount)
     amount = tostring(amount)
@@ -232,5 +233,12 @@ function tools.trim(str)
     str = str:gsub('^%s*(.-)%s*$', '%1')
     return str
 end
+
+tools.symbols = {
+    ['back'] = utf8.char(8592),
+    ['previous'] = utf8.char(8592),
+    ['forward'] = utf8.char(8594),
+    ['next'] = utf8.char(8594)
+}
 
 return tools
