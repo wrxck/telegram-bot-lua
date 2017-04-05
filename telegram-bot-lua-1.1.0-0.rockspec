@@ -1,6 +1,6 @@
-rockspec_format = "1.0.4"
+rockspec_format = "1.1.0"
 package = "telegram-bot-lua"
-version = "1.0.4-0"
+version = "1.1.0-0"
 
 source = {
     url = "git://github.com/wrxck/telegram-bot-lua.git",

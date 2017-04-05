@@ -1,6 +1,18 @@
 --[[
-    Copyright 2017 Matthew Hesketh <wrxck0@gmail.com>
-    This code is licensed under the GPLv3. See /LICENSE for details.
+
+       _       _                                      _           _          _
+      | |     | |                                    | |         | |        | |
+      | |_ ___| | ___  __ _ _ __ __ _ _ __ ___ ______| |__   ___ | |_ ______| |_   _  __ _
+      | __/ _ \ |/ _ \/ _` | '__/ _` | '_ ` _ \______| '_ \ / _ \| __|______| | | | |/ _` |
+      | ||  __/ |  __/ (_| | | | (_| | | | | | |     | |_) | (_) | |_       | | |_| | (_| |
+       \__\___|_|\___|\__, |_|  \__,_|_| |_| |_|     |_.__/ \___/ \__|      |_|\__,_|\__,_|
+                       __/ |
+                      |___/
+
+      Version 1.1.0-0
+      Copyright (c) 2017 Matthew Hesketh
+      See LICENSE for details
+
 ]]
 
 local api = {}
@@ -11,10 +23,13 @@ local ltn12 = require('ltn12')
 local json = require('dkjson')
 
 function api.configure(token, debug)
-    if not token or type(token) ~= 'string' then
+    if not token or type(token) ~= 'string'
+    then
         token = nil
     end
-    api.debug = debug and true or false
+    api.debug = debug
+    and true
+    or false
     api.token = assert(
         token,
         'Please specify your bot API token you received from @BotFather!'
@@ -32,11 +47,14 @@ function api.request(endpoint, parameters, file)
         endpoint,
         'You must specify an endpoint to make this request to!'
     )
-    parameters = parameters or {}
-    for k, v in pairs(parameters) do
+    parameters = parameters
+    or {}
+    for k, v in pairs(parameters)
+    do
         parameters[k] = tostring(v)
     end
-    if api.debug then
+    if api.debug
+    then
         print(
             json.encode(
                 parameters,
@@ -46,35 +64,31 @@ function api.request(endpoint, parameters, file)
             )
         )
     end
-    if file and next(file) ~= nil then
+    if file
+    and next(file) ~= nil
+    then
         local file_type, file_name = next(file)
-        if not file_name then
-            return false
-        end
-        if file_name:match('^%/[Tt][Mm][Pp]%/') then
-            local file_res = io.open(
-                file_name,
-                'r'
-            )
-            local file_data = {
+        local file_res = io.open(
+            file_name,
+            'r'
+        )
+        if file_res
+        then
+            parameters[file_type] = {
                 filename = file_name,
                 data = file_res:read('*a')
             }
             file_res:close()
-            parameters[file_type] = file_data
         else
-            local file_type, file_name = next(file)
             parameters[file_type] = file_name
         end
     end
-    if next(parameters) == nil then
-        parameters = {
-            ''
-        }
-    end
+    parameters = next(parameters) == nil
+    and { '' }
+    or parameters
     local response = {}
     local body, boundary = multipart.encode(parameters)
-    local success, code = https.request(
+    local success, res = https.request(
         {
             ['url'] = endpoint,
             ['method'] = 'POST',
@@ -86,51 +100,34 @@ function api.request(endpoint, parameters, file)
             ['sink'] = ltn12.sink.table(response)
         }
     )
-    if not success then
-        print(
-            string.format(
-                'Connection error [%s]',
-                code
-            )
-        )
-        return false, code
+    if not success
+    then
+        print('Connection error [' .. res .. ']')
+        return false, res
     end
-    local jdat = table.concat(response)
-    if not json.decode(jdat) then
-        return jdat, code
+    local jstr = table.concat(response)
+    local jdat = json.decode(jstr)
+    if not jdat
+    then
+        return false, res
+    elseif not jdat.ok
+    then
+        print(jdat.description .. ' [' .. jdat.error_code .. ']')
+        return false, jdat
     end
-    jdat = json.decode(jdat)
-    if jdat.ok == true then
-        return jdat, code
-    end
-    print(
-        string.format(
-            '%s [%s]',
-            jdat.description,
-            jdat.error_code
-        )
-    )
-    return false, jdat
+    return jdat, code
 end
 
 function api.get_me()
-    return api.request(
-        string.format(
-            'https://api.telegram.org/bot%s/getMe',
-            api.token
-        )
-    )
+    return api.request('https://api.telegram.org/bot' .. api.token .. '/getMe')
 end
 
 function api.get_updates(timeout, offset, limit, allowed_updates) -- https://core.telegram.org/bots/api#getupdates
-    if type(allowed_updates) == 'table' then
-        allowed_updates = json.encode(allowed_updates)
-    end
+    allowed_updates = type(allowed_updates) == 'table'
+    and json.encode(allowed_updates)
+    or allowed_updates
     return api.request(
-        string.format(
-            'https://api.telegram.org/bot%s/getUpdates',
-            api.token
-        ),
+        'https://api.telegram.org/bot' .. api.token .. '/getUpdates',
         {
             ['timeout'] = timeout,
             ['offset'] = offset,
@@ -141,30 +138,34 @@ function api.get_updates(timeout, offset, limit, allowed_updates) -- https://cor
 end
 
 function api.send_message(message, text, parse_mode, disable_web_page_preview, disable_notification, reply_to_message_id, reply_markup) -- https://core.telegram.org/bots/api#sendmessage
-    if disable_web_page_preview == nil then
-        disable_web_page_preview = true
-    end
-    if type(reply_markup) == 'table' then
-        reply_markup = json.encode(reply_markup)
-    end
-    local chat_id = message
-    if type(message) == 'table' then
-        chat_id = message.chat.id
-    end
-    if type(parse_mode) == 'boolean' and parse_mode == true then
-        parse_mode = 'markdown'
-    end
+    disable_web_page_preview = disable_web_page_preview == nil
+    and true
+    or disable_web_page_preview
+    reply_markup = type(reply_markup) == 'table'
+    and json.encode(reply_markup)
+    or reply_markup
+    message = (
+        type(message) == 'table'
+        and message.chat
+        and message.chat.id
+    )
+    and message.chat.id
+    or message
+    parse_mode = (
+        type(parse_mode) == 'boolean'
+        and parse_mode == true
+    )
+    and 'markdown'
+    or parse_mode
     return api.request(
-        string.format(
-            'https://api.telegram.org/bot%s/sendMessage',
-            api.token
-        ),
+        'https://api.telegram.org/bot' .. api.token .. '/sendMessage',
         {
-            ['chat_id'] = chat_id,
+            ['chat_id'] = message,
             ['text'] = text,
             ['parse_mode'] = parse_mode,
             ['disable_web_page_preview'] = disable_web_page_preview,
-            ['disable_notification'] = disable_notification or false,
+            ['disable_notification'] = disable_notification
+            or false,
             ['reply_to_message_id'] = reply_to_message_id,
             ['reply_markup'] = reply_markup
         }
@@ -172,20 +173,35 @@ function api.send_message(message, text, parse_mode, disable_web_page_preview, d
 end
 
 function api.send_reply(message, text, parse_mode, disable_web_page_preview, reply_markup) -- A variant of api.send_message(), optimised for sending a message as a reply.
-    if disable_web_page_preview == nil then
-        disable_web_page_preview = true
+    if type(message) ~= 'table'
+    or (
+        type(message) == 'table'
+        and (
+            not message.chat
+            or (
+                message.chat
+                and not message.chat.id
+            )
+            or not message.message_id
+        )
+    )
+    then
+        return false
     end
-    if type(reply_markup) == 'table' then
-        reply_markup = json.encode(reply_markup)
-    end
-    if type(parse_mode) == 'boolean' and parse_mode == true then
-        parse_mode = 'markdown'
-    end
+    disable_web_page_preview = disable_web_page_preview == nil
+    and true
+    or disable_web_page_preview
+    reply_markup = type(reply_markup) == 'table'
+    and json.encode(reply_markup)
+    or reply_markup
+    parse_mode = (
+        type(parse_mode) == 'boolean'
+        and parse_mode == true
+    )
+    and 'markdown'
+    or parse_mode
     return api.request(
-        string.format(
-            'https://api.telegram.org/bot%s/sendMessage',
-            api.token
-        ),
+        'https://api.telegram.org/bot' .. api.token .. '/sendMessage',
         {
             ['chat_id'] = message.chat.id,
             ['text'] = text,
@@ -200,32 +216,28 @@ end
 
 function api.forward_message(chat_id, from_chat_id, disable_notification, message_id) -- https://core.telegram.org/bots/api#forwardmessage
     return api.request(
-        string.format(
-            'https://api.telegram.org/bot%s/forwardMessage',
-            api.token
-        ),
+        'https://api.telegram.org/bot' .. api.token .. '/forwardMessage',
         {
             ['chat_id'] = chat_id,
             ['from_chat_id'] = from_chat_id,
-            ['disable_notification'] = disable_notification or false,
+            ['disable_notification'] = disable_notification
+            or false,
             ['message_id'] = message_id
         }
     )
 end
 
 function api.send_photo(chat_id, photo, caption, disable_notification, reply_to_message_id, reply_markup) -- https://core.telegram.org/bots/api#sendphoto
-    if type(reply_markup) == 'table' then
-        reply_markup = json.encode(reply_markup)
-    end
+    reply_markup = type(reply_markup) == 'table'
+    and json.encode(reply_markup)
+    or reply_markup
     return api.request(
-        string.format(
-            'https://api.telegram.org/bot%s/sendPhoto',
-            api.token
-        ),
+        'https://api.telegram.org/bot' .. api.token .. '/sendPhoto',
         {
             ['chat_id'] = chat_id,
             ['caption'] = caption,
-            ['disable_notification'] = disable_notification or false,
+            ['disable_notification'] = disable_notification
+            or false,
             ['reply_to_message_id'] = reply_to_message_id,
             ['reply_markup'] = reply_markup
         },
@@ -236,21 +248,19 @@ function api.send_photo(chat_id, photo, caption, disable_notification, reply_to_
 end
 
 function api.send_audio(chat_id, audio, caption, duration, performer, title, disable_notification, reply_to_message_id, reply_markup) -- https://core.telegram.org/bots/api#sendaudio
-    if type(reply_markup) == 'table' then
-        reply_markup = json.encode(reply_markup)
-    end
+    reply_markup = type(reply_markup) == 'table'
+    and json.encode(reply_markup)
+    or reply_markup
     return api.request(
-        string.format(
-            'https://api.telegram.org/bot%s/sendAudio',
-            api.token
-        ),
+        'https://api.telegram.org/bot' .. api.token .. '/sendAudio',
         {
             ['chat_id'] = chat_id,
             ['caption'] = caption,
             ['duration'] = duration,
             ['performer'] = performer,
             ['title'] = title,
-            ['disable_notification'] = disable_notification or false,
+            ['disable_notification'] = disable_notification
+            or false,
             ['reply_to_message_id'] = reply_to_message_id,
             ['reply_markup'] = reply_markup
         },
@@ -261,18 +271,16 @@ function api.send_audio(chat_id, audio, caption, duration, performer, title, dis
 end
 
 function api.send_document(chat_id, document, caption, disable_notification, reply_to_message_id, reply_markup) -- https://core.telegram.org/bots/api#senddocument
-    if type(reply_markup) == 'table' then
-        reply_markup = json.encode(reply_markup)
-    end
+    reply_markup = type(reply_markup) == 'table'
+    and json.encode(reply_markup)
+    or reply_markup
     return api.request(
-        string.format(
-            'https://api.telegram.org/bot%s/sendDocument',
-            api.token
-        ),
+        'https://api.telegram.org/bot' .. api.token .. '/sendDocument',
         {
             ['chat_id'] = chat_id,
             ['caption'] = caption,
-            ['disable_notification'] = disable_notification or false,
+            ['disable_notification'] = disable_notification
+            or false,
             ['reply_to_message_id'] = reply_to_message_id,
             ['reply_markup'] = reply_markup
         },
@@ -283,17 +291,15 @@ function api.send_document(chat_id, document, caption, disable_notification, rep
 end
 
 function api.send_sticker(chat_id, sticker, disable_notification, reply_to_message_id, reply_markup) -- https://core.telegram.org/bots/api#sendsticker
-    if type(reply_markup) == 'table' then
-        reply_markup = json.encode(reply_markup)
-    end
+    reply_markup = type(reply_markup) == 'table'
+    and json.encode(reply_markup)
+    or reply_markup
     return api.request(
-        string.format(
-            'https://api.telegram.org/bot%s/sendSticker',
-            api.token
-        ),
+        'https://api.telegram.org/bot' .. api.token .. '/sendSticker',
         {
             ['chat_id'] = chat_id,
-            ['disable_notification'] = disable_notification or false,
+            ['disable_notification'] = disable_notification
+            or false,
             ['reply_to_message_id'] = reply_to_message_id,
             ['reply_markup'] = reply_markup
         },
@@ -304,21 +310,19 @@ function api.send_sticker(chat_id, sticker, disable_notification, reply_to_messa
 end
 
 function api.send_video(chat_id, video, duration, width, height, caption, disable_notification, reply_to_message_id, reply_markup) -- https://core.telegram.org/bots/api#sendvideo
-    if type(reply_markup) == 'table' then
-        reply_markup = json.encode(reply_markup)
-    end
+    reply_markup = type(reply_markup) == 'table'
+    and json.encode(reply_markup)
+    or reply_markup
     return api.request(
-        string.format(
-            'https://api.telegram.org/bot%s/sendVideo',
-            api.token
-        ),
+        'https://api.telegram.org/bot' .. api.token .. '/sendVideo',
         {
             ['chat_id'] = chat_id,
             ['duration'] = duration,
             ['width'] = width,
             ['height'] = height,
             ['caption'] = caption,
-            ['disable_notification'] = disable_notification or false,
+            ['disable_notification'] = disable_notification
+            or false,
             ['reply_to_message_id'] = reply_to_message_id,
             ['reply_markup'] = reply_markup
         },
@@ -329,14 +333,11 @@ function api.send_video(chat_id, video, duration, width, height, caption, disabl
 end
 
 function api.send_voice(chat_id, voice, caption, duration, disable_notification, reply_to_message_id, reply_markup) -- https://core.telegram.org/bots/api#sendvoice
-    if type(reply_markup) == 'table' then
-        reply_markup = json.encode(reply_markup)
-    end
+    reply_markup = type(reply_markup) == 'table'
+    and json.encode(reply_markup)
+    or reply_markup
     return api.request(
-        string.format(
-            'https://api.telegram.org/bot%s/sendVoice',
-            api.token
-        ),
+        'https://api.telegram.org/bot' .. api.token .. '/sendVoice',
         {
             ['chat_id'] = chat_id,
             ['caption'] = caption,
@@ -352,19 +353,17 @@ function api.send_voice(chat_id, voice, caption, duration, disable_notification,
 end
 
 function api.send_location(chat_id, latitude, longitude, disable_notification, reply_to_message_id, reply_markup) -- https://core.telegram.org/bots/api#sendlocation
-    if type(reply_markup) == 'table' then
-        reply_markup = json.encode(reply_markup)
-    end
+    reply_markup = type(reply_markup) == 'table'
+    and json.encode(reply_markup)
+    or reply_markup
     return api.request(
-        string.format(
-            'https://api.telegram.org/bot%s/sendLocation',
-            api.token
-        ),
+        'https://api.telegram.org/bot' .. api.token .. '/sendLocation',
         {
             ['chat_id'] = chat_id,
             ['latitude'] = latitude,
             ['longitude'] = longitude,
-            ['disable_notification'] = disable_notification or false,
+            ['disable_notification'] = disable_notification
+            or false,
             ['reply_to_message_id'] = reply_to_message_id,
             ['reply_markup'] = reply_markup
         }
@@ -372,14 +371,11 @@ function api.send_location(chat_id, latitude, longitude, disable_notification, r
 end
 
 function api.send_venue(chat_id, latitude, longitude, title, address, foursquare_id, disable_notification, reply_to_message_id, reply_markup) -- https://core.telegram.org/bots/api#sendvenue
-    if type(reply_markup) == 'table' then
-        reply_markup = json.encode(reply_markup)
-    end
+    reply_markup = type(reply_markup) == 'table'
+    and json.encode(reply_markup)
+    or reply_markup
     return api.request(
-        string.format(
-            'https://api.telegram.org/bot%s/sendVenue',
-            api.token
-        ),
+        'https://api.telegram.org/bot' .. api.token .. '/sendVenue',
         {
             ['chat_id'] = chat_id,
             ['latitude'] = latitude,
@@ -387,7 +383,8 @@ function api.send_venue(chat_id, latitude, longitude, title, address, foursquare
             ['title'] = title,
             ['address'] = address,
             ['foursquare_id'] = foursquare_id,
-            ['disable_notification'] = disable_notification or false,
+            ['disable_notification'] = disable_notification
+            or false,
             ['reply_to_message_id'] = reply_to_message_id,
             ['reply_markup'] = reply_markup
         }
@@ -395,20 +392,18 @@ function api.send_venue(chat_id, latitude, longitude, title, address, foursquare
 end
 
 function api.send_contact(chat_id, phone_number, first_name, last_name, disable_notification, reply_to_message_id, reply_markup) -- https://core.telegram.org/bots/api#sendcontact
-    if type(reply_markup) == 'table' then
-        reply_markup = json.encode(reply_markup)
-    end
+    reply_markup = type(reply_markup) == 'table'
+    and json.encode(reply_markup)
+    or reply_markup
     return api.request(
-        string.format(
-            'https://api.telegram.org/bot%s/sendContact',
-            api.token
-        ),
+        'https://api.telegram.org/bot' .. api.token .. '/sendContact',
         {
             ['chat_id'] = chat_id,
             ['phone_number'] = phone_number,
             ['first_name'] = first_name,
             ['last_name'] = last_name,
-            ['disable_notification'] = disable_notification or false,
+            ['disable_notification'] = disable_notification
+            or false,
             ['reply_to_message_id'] = reply_to_message_id,
             ['reply_markup'] = reply_markup
         }
@@ -417,23 +412,18 @@ end
 
 function api.send_chat_action(chat_id, action) -- https://core.telegram.org/bots/api#sendchataction
     return api.request(
-        string.format(
-            'https://api.telegram.org/bot%s/sendChatAction',
-            api.token
-        ),
+        'https://api.telegram.org/bot' .. api.token .. '/sendChatAction',
         {
             ['chat_id'] = chat_id,
-            ['action'] = action or 'typing'
+            ['action'] = action
+            or 'typing' -- Fallback to typing as the default action.
         }
     )
 end
 
 function api.get_user_profile_photos(user_id, offset, limit) -- https://core.telegram.org/bots/api#getuserprofilephotos
     return api.request(
-        string.format(
-            'https://api.telegram.org/bot%s/getUserProfilePhotos',
-            api.token
-        ),
+        'https://api.telegram.org/bot' .. api.token .. '/getUserProfilePhotos',
         {
             ['user_id'] = user_id,
             ['offset'] = offset,
@@ -444,10 +434,7 @@ end
 
 function api.get_file(file_id) -- https://core.telegram.org/bots/api#getfile
     return api.request(
-        string.format(
-            'https://api.telegram.org/bot%s/getFile',
-            api.token
-        ),
+        'https://api.telegram.org/bot' .. api.token .. '/getFile',
         {
             ['file_id'] = file_id
         }
@@ -456,10 +443,7 @@ end
 
 function api.ban_chat_member(chat_id, user_id) -- https://core.telegram.org/bots/api#kickchatmember
     return api.request(
-        string.format(
-            'https://api.telegram.org/bot%s/kickChatMember',
-            api.token
-        ),
+        'https://api.telegram.org/bot' .. api.token .. '/kickChatMember',
         {
             ['chat_id'] = chat_id,
             ['user_id'] = user_id
@@ -469,16 +453,14 @@ end
 
 function api.kick_chat_member(chat_id, user_id)
     local success = api.request(
-        string.format(
-            'https://api.telegram.org/bot%s/kickChatMember',
-            api.token
-        ),
+        'https://api.telegram.org/bot' .. api.token .. '/kickChatMember',
         {
             ['chat_id'] = chat_id,
             ['user_id'] = user_id
         }
     )
-    if not success then
+    if not success
+    then
         return success
     end
     return api.unban_chat_member(
@@ -490,12 +472,11 @@ end
 
 function api.unban_chat_member(chat_id, user_id) -- https://core.telegram.org/bots/api#unbanchatmember
     local success
-    for i = 1, 3 do
+    for i = 1, 3 -- Repeat 3 times to ensure the user was unbanned (I've encountered issues before so
+    -- this is for precautionary measures.
+    do
         success = api.request(
-            string.format(
-                'https://api.telegram.org/bot%s/unbanChatMember',
-                api.token
-            ),
+            'https://api.telegram.org/bot' .. api.token .. '/unbanChatMember',
             {
                 ['chat_id'] = chat_id,
                 ['user_id'] = user_id
@@ -507,10 +488,7 @@ end
 
 function api.leave_chat(chat_id) -- https://core.telegram.org/bots/api#leavechat
     return api.request(
-        string.format(
-            'https://api.telegram.org/bot%s/leaveChat',
-            api.token
-        ),
+        'https://api.telegram.org/bot' .. api.token .. '/leaveChat',
         {
             ['chat_id'] = chat_id
         }
@@ -519,10 +497,7 @@ end
 
 function api.get_chat_administrators(chat_id) -- https://core.telegram.org/bots/api#getchatadministrators
     return api.request(
-        string.format(
-            'https://api.telegram.org/bot%s/getChatAdministrators',
-            api.token
-        ),
+        'https://api.telegram.org/bot' .. api.token .. '/getChatAdministrators',
         {
             ['chat_id'] = chat_id
         }
@@ -531,10 +506,7 @@ end
 
 function api.get_chat_members_count(chat_id) -- https://core.telegram.org/bots/api#getchatmemberscount
     return api.request(
-        string.format(
-            'https://api.telegram.org/bot%s/getChatMembersCount',
-            api.token
-        ),
+        'https://api.telegram.org/bot' .. api.token .. '/getChatMembersCount',
         {
             ['chat_id'] = chat_id
         }
@@ -543,10 +515,7 @@ end
 
 function api.get_chat_member(chat_id, user_id) -- https://core.telegram.org/bots/api#getchatmember
     return api.request(
-        string.format(
-            'https://api.telegram.org/bot%s/getChatMember',
-            api.token
-        ),
+        'https://api.telegram.org/bot' .. api.token .. '/getChatMember',
         {
             ['chat_id'] = chat_id,
             ['user_id'] = user_id
@@ -556,14 +525,12 @@ end
 
 function api.answer_callback_query(callback_query_id, text, show_alert, url, cache_time) -- https://core.telegram.org/bots/api#answercallbackquery
     return api.request(
-        string.format(
-            'https://api.telegram.org/bot%s/answerCallbackQuery',
-            api.token
-        ),
+        'https://api.telegram.org/bot' .. api.token .. '/answerCallbackQuery',
         {
             ['callback_query_id'] = callback_query_id,
             ['text'] = text,
-            ['show_alert'] = show_alert or false,
+            ['show_alert'] = show_alert
+            or false,
             ['url'] = url,
             ['cache_time'] = cache_time
         }
@@ -571,17 +538,17 @@ function api.answer_callback_query(callback_query_id, text, show_alert, url, cac
 end
 
 function api.edit_message_text(chat_id, message_id, text, parse_mode, disable_web_page_preview, reply_markup, inline_message_id) -- https://core.telegram.org/bots/api#editmessagetext
-    if type(reply_markup) == 'table' then
-        reply_markup = json.encode(reply_markup)
-    end
-    if type(parse_mode) == 'boolean' and parse_mode == true then
-        parse_mode = 'markdown'
-    end
+    reply_markup = type(reply_markup) == 'table'
+    and json.encode(reply_markup)
+    or reply_markup
+    parse_mode = (
+        type(parse_mode) == 'boolean'
+        and parse_mode == true
+    )
+    and 'markdown'
+    or parse_mode
     return api.request(
-        string.format(
-            'https://api.telegram.org/bot%s/editMessageText',
-            api.token
-        ),
+        'https://api.telegram.org/bot' .. api.token .. '/editMessageText',
         {
             ['chat_id'] = chat_id,
             ['message_id'] = message_id,
@@ -595,14 +562,11 @@ function api.edit_message_text(chat_id, message_id, text, parse_mode, disable_we
 end
 
 function api.edit_message_caption(chat_id, message_id, caption, reply_markup, inline_message_id) -- https://core.telegram.org/bots/api#editmessagecaption
-    if type(reply_markup) == 'table' then
-        reply_markup = json.encode(reply_markup)
-    end
+    reply_markup = type(reply_markup) == 'table'
+    and json.encode(reply_markup)
+    or reply_markup
     return api.request(
-        string.format(
-            'https://api.telegram.org/bot%s/editMessageCaption',
-            api.token
-        ),
+        'https://api.telegram.org/bot' .. api.token .. '/editMessageCaption',
         {
             ['chat_id'] = chat_id,
             ['message_id'] = message_id,
@@ -614,14 +578,11 @@ function api.edit_message_caption(chat_id, message_id, caption, reply_markup, in
 end
 
 function api.edit_message_reply_markup(chat_id, message_id, inline_message_id, reply_markup) -- https://core.telegram.org/bots/api#editmessagereplymarkup
-    if type(reply_markup) == 'table' then
-        reply_markup = json.encode(reply_markup)
-    end
+    reply_markup = type(reply_markup) == 'table'
+    and json.encode(reply_markup)
+    or reply_markup
     return api.request(
-        string.format(
-            'https://api.telegram.org/bot%s/editMessageReplyMarkup',
-            api.token
-        ),
+        'https://api.telegram.org/bot' .. api.token .. '/editMessageReplyMarkup',
         {
             ['chat_id'] = chat_id,
             ['message_id'] = message_id,
@@ -632,44 +593,44 @@ function api.edit_message_reply_markup(chat_id, message_id, inline_message_id, r
 end
 
 function api.answer_inline_query(inline_query_id, results, cache_time, is_personal, next_offset, switch_pm_text, switch_pm_parameter) -- https://core.telegram.org/bots/api#answerinlinequery
-    if type(results) == 'table' then
-        if results.id then
-            results = {
-                results
-            }
+    if results
+    and type(results) == 'table'
+    then
+        if results.id
+        then
+            results = { results }
         end
         results = json.encode(results)
     end
     return api.request(
-        string.format(
-            'https://api.telegram.org/bot%s/answerInlineQuery',
-            api.token
-        ),
+        'https://api.telegram.org/bot' .. api.token .. '/answerInlineQuery',
         {
             ['inline_query_id'] = inline_query_id,
             ['results'] = results,
-            ['switch_pm_text'] = switch_pm_text or 'More features!',
-            ['switch_pm_parameter'] = switch_pm_parameter or 'help',
-            ['cache_time'] = cache_time or 0,
-            ['is_personal'] = is_personal or false,
+            ['switch_pm_text'] = switch_pm_text
+            or 'More Features',
+            ['switch_pm_parameter'] = switch_pm_parameter
+            or 'help',
+            ['cache_time'] = cache_time
+            or 0,
+            ['is_personal'] = is_personal
+            or false,
             ['next_offset'] = next_offset
         }
     )
 end
 
 function api.send_game(chat_id, game_short_name, disable_notification, reply_to_message_id, reply_markup) -- https://core.telegram.org/bots/api#sendgame
-    if type(reply_markup) == 'table' then
-        reply_markup = json.encode(reply_markup)
-    end
+    reply_markup = type(reply_markup) == 'table'
+    and json.encode(reply_markup)
+    or reply_markup
     return api.request(
-        string.format(
-            'https://api.telegram.org/bot%s/sendGame',
-            api.token
-        ),
+        'https://api.telegram.org/bot' .. api.token .. '/sendGame',
         {
             ['chat_id'] = chat_id,
             ['game_short_name'] = game_short_name,
-            ['disable_notification'] = disable_notification or false,
+            ['disable_notification'] = disable_notification
+            or false,
             ['reply_to_message_id'] = reply_to_message_id,
             ['reply_markup'] = reply_markup
         }
@@ -678,15 +639,14 @@ end
 
 function api.set_game_score(chat_id, user_id, message_id, score, force, disable_edit_message, inline_message_id) -- https://core.telegram.org/bots/api#setgamescore
     return api.request(
-        string.format(
-            'https://api.telegram.org/bot%s/setGameScore',
-            api.token
-        ),
+        'https://api.telegram.org/bot' .. api.token .. '/setGameScore',
         {
             ['user_id'] = user_id,
             ['score'] = score,
-            ['force'] = force or false,
-            ['disable_edit_message'] = disable_edit_message or false,
+            ['force'] = force
+            or false,
+            ['disable_edit_message'] = disable_edit_message
+            or false,
             ['chat_id'] = chat_id,
             ['message_id'] = message_id,
             ['inline_message_id'] = inline_message_id
@@ -696,10 +656,7 @@ end
 
 function api.get_game_high_scores(chat_id, user_id, message_id, inline_message_id) -- https://core.telegram.org/bots/api#getgamehighscores
     return api.request(
-        string.format(
-            'https://api.telegram.org/bot%s/getGameHighScores',
-            api.token
-        ),
+        'https://api.telegram.org/bot' .. api.token .. '/getGameHighScores',
         {
             ['user_id'] = user_id,
             ['chat_id'] = chat_id,
@@ -711,58 +668,84 @@ end
 
 function api.get_chat(chat_id) -- https://core.telegram.org/bots/api#getchat
     return api.request(
-        string.format(
-            'https://api.telegram.org/bot%s/getChat',
-            api.token
-        ),
+        'https://api.telegram.org/bot' .. api.token .. '/getChat',
         {
             ['chat_id'] = chat_id
         }
     )
 end
 
-function api.on_update(update) end
-function api.on_message(message) end
-function api.on_callback_query(callback_query) end
-function api.on_inline_query(inline_query) end
-function api.on_channel_post(channel_post) end
-function api.on_edited_message(edited_message) end
-function api.on_edited_channel_post(edited_channel_post) end
-function api.on_chosen_inline_result(chosen_inline_result) end
+function api.on_update(update)
+end
+
+function api.on_message(message)
+end
+function api.on_callback_query(callback_query)
+end
+
+function api.on_inline_query(inline_query)
+end
+
+function api.on_channel_post(channel_post)
+end
+
+function api.on_edited_message(edited_message)
+end
+
+function api.on_edited_channel_post(edited_channel_post)
+end
+
+function api.on_chosen_inline_result(chosen_inline_result)
+end
 
 function api.process_update(update)
-    if update then
+    if update
+    then
         api.on_update(update)
     end
-    if update.message then
+    if update.message
+    then
         return api.on_message(update.message)
-    elseif update.edited_message then
+    elseif update.edited_message
+    then
         return api.on_edited_message(update.edited_message)
-    elseif update.callback_query then
+    elseif update.callback_query
+    then
         return api.on_callback_query(update.callback_query)
-    elseif update.inline_query then
+    elseif update.inline_query
+    then
         return api.on_inline_query(update.inline_query)
-    elseif update.channel_post then
+    elseif update.channel_post
+    then
         return api.on_channel_post(update.channel_post)
-    elseif update.edited_channel_post then
+    elseif update.edited_channel_post
+    then
         return api.on_edited_channel_post(update.edited_channel_post)
-    elseif update.chosen_inline_result then
+    elseif update.chosen_inline_result
+    then
         return api.on_chosen_inline_result(update.chosen_inline_result)
     end
     return
 end
 
 function api.run(limit, timeout)
-    limit = limit or 1
-    timeout = timeout or 0
+    limit = limit
+    or 1
+    timeout = timeout
+    or 0
     offset = 0
-    while true do
+    while true
+    do
         local updates = api.get_updates(
             timeout,
             offset
         )
-        if updates and updates.result then
-            for k, v in pairs(updates.result) do
+        if updates
+        and type(updates) == 'table'
+        and updates.result
+        then
+            for k, v in pairs(updates.result)
+            do
                 api.process_update(v)
                 offset = v.update_id + 1
             end
@@ -772,17 +755,20 @@ function api.run(limit, timeout)
 end
 
 function api.input_text_message_content(message_text, parse_mode, disable_web_page_preview, encoded)
-    if type(parse_mode) == 'boolean' and parse_mode == true then
-        parse_mode = 'markdown'
-    end
+    parse_mode = (
+        type(parse_mode) == 'boolean'
+        and parse_mode == true
+    )
+    and 'markdown'
+    or parse_mode
     local input_message_content = {
         ['message_text'] = tostring(message_text),
         ['parse_mode'] = parse_mode,
         ['disable_web_page_preview'] = disable_web_page_preview
     }
-    if encoded then
-        input_message_content = json.encode(input_message_content)
-    end
+    input_message_content = encoded
+    and json.encode(input_message_content)
+    or input_message_content
     return input_message_content
 end
 
@@ -791,9 +777,9 @@ function api.input_location_message_content(latitude, longitude, encoded)
         ['latitude'] = tonumber(latitude),
         ['longitude'] = tonumber(longitude)
     }
-    if encoded then
-        input_message_content = json.encode(input_message_content)
-    end
+    input_message_content = encoded
+    and json.encode(input_message_content)
+    or input_message_content
     return input_message_content
 end
 
@@ -805,9 +791,9 @@ function api.input_venue_message_content(latitude, longitude, title, address, fo
         ['address'] = tostring(address),
         ['foursquare_id'] = foursquare_id
     }
-    if encoded then
-        input_message_content = json.encode(input_message_content)
-    end
+    input_message_content = encoded
+    and json.encode(input_message_content)
+    or input_message_content
     return input_message_content
 end
 
@@ -817,24 +803,25 @@ function api.input_contact_message_content(phone_number, first_name, last_name, 
         ['first_name'] = tonumber(first_name),
         ['last_name'] = last_name
     }
-    if encoded then
-        input_message_content = json.encode(input_message_content)
-    end
+    input_message_content = encoded
+    and json.encode(input_message_content)
+    or input_message_content
     return input_message_content
 end
 
---[[
-
-    Functions for handling inline objects to use with api.answer_inline_query()
-
-]]
+-- Functions for handling inline objects to use with api.answer_inline_query().
 
 function api.send_inline_article(inline_query_id, title, description, message_text, parse_mode, reply_markup)
-    description = description or title
-    message_text = message_text or description
-    if type(parse_mode) == 'boolean' and parse_mode == true then
-        parse_mode = 'markdown'
-    end
+    description = description
+    or title
+    message_text = message_text
+    or description
+    parse_mode = (
+        type(parse_mode) == 'boolean'
+        and parse_mode == true
+    )
+    and 'markdown'
+    or parse_mode
     return api.answer_inline_query(
         inline_query_id,
         json.encode(
@@ -856,19 +843,19 @@ function api.send_inline_article(inline_query_id, title, description, message_te
 end
 
 function api.send_inline_article_url(inline_query_id, title, url, hide_url, input_message_content, reply_markup, id)
-    if id then
-        id = tostring(id)
-    end
     return api.answer_inline_query(
         inline_query_id,
         json.encode(
             {
                 {
                     ['type'] = 'article',
-                    ['id'] = id or '1',
+                    ['id'] = id
+                    and tostring(id)
+                    or '1',
                     ['title'] = tostring(title),
                     ['url'] = tostring(url),
-                    ['hide_url'] = hide_url or false,
+                    ['hide_url'] = hide_url
+                    or false,
                     ['input_message_content'] = input_message_content,
                     ['reply_markup'] = reply_markup
                 }
@@ -878,7 +865,6 @@ function api.send_inline_article_url(inline_query_id, title, url, hide_url, inpu
 end
 
 api.inline_result_meta = {}
-
 api.inline_result_meta.__index = api.inline_result_meta
 
 function api.inline_result_meta:type(type)
@@ -887,10 +873,9 @@ function api.inline_result_meta:type(type)
 end
 
 function api.inline_result_meta:id(id)
-    if id then
-        id = tostring(id)
-    end
-    self['id'] = id or '1'
+    self['id'] = id
+    and tostring(id)
+    or '1'
     return self
 end
 
@@ -915,7 +900,8 @@ function api.inline_result_meta:url(url)
 end
 
 function api.inline_result_meta:hide_url(hide_url)
-    self['hide_url'] = hide_url or false
+    self['hide_url'] = hide_url
+    or false
     return self
 end
 
@@ -1128,70 +1114,85 @@ function api.send_inline_cached_photo(inline_query_id, photo_file_id, caption, r
 end
 
 function api.url_button(text, url, encoded)
-    if not text or not url then
+    if not text
+    or not url
+    then
         return false
     end
     local button = {
         ['text'] = tostring(text),
         ['url'] = tostring(url)
     }
-    if encoded then
+    if encoded
+    then
         button = json.encode(button)
     end
     return button
 end
 
 function api.callback_data_button(text, callback_data, encoded)
-    if not text or not callback_data then
+    if not text
+    or not callback_data
+    then
         return false
     end
     local button = {
         ['text'] = tostring(text),
         ['callback_data'] = tostring(callback_data)
     }
-    if encoded then
+    if encoded
+    then
         button = json.encode(button)
     end
     return button
 end
 
 function api.switch_inline_query_button(text, switch_inline_query, encoded)
-    if not text or not switch_inline_query then
+    if not text
+    or not switch_inline_query
+    then
         return false
     end
     local button = {
         ['text'] = tostring(text),
         ['switch_inline_query'] = tostring(switch_inline_query)
     }
-    if encoded then
+    if encoded
+    then
         button = json.encode(button)
     end
     return button
 end
 
 function api.switch_inline_query_current_chat_button(text, switch_inline_query_current_chat, encoded)
-    if not text or not switch_inline_query_current_chat then
+    if not text
+    or not switch_inline_query_current_chat
+    then
         return false
     end
     local button = {
         ['text'] = tostring(text),
         ['switch_inline_query_current_chat'] = tostring(switch_inline_query_current_chat)
     }
-    if encoded then
+    if encoded
+    then
         button = json.encode(button)
     end
     return button
 end
 
 function api.callback_game_button(text, callback_game, encoded)
-    if not text or not callback_game then
+    if not text
+    or not callback_game
+    then
         return false
     end
     local button = {
         ['text'] = tostring(text),
         ['callback_game'] = tostring(callback_game)
     }
-    if encoded then
+    if encoded
+    then
         button = json.encode(button)
     end
     return button
@@ -1200,7 +1201,8 @@ end
 function api.remove_keyboard(selective)
     return {
         ['remove_keyboard'] = true,
-        ['selective'] = selective or false
+        ['selective'] = selective
+        or false
     }
 end
 
@@ -1219,9 +1221,12 @@ function api.keyboard(resize_keyboard, one_time_keyboard, selective)
     return setmetatable(
         {
             ['keyboard'] = {},
-            ['resize_keyboard'] = resize_keyboard or false,
-            ['one_time_keyboard'] = one_time_keyboard or false,
-            ['selective'] = selective or false
+            ['resize_keyboard'] = resize_keyboard
+            or false,
+            ['one_time_keyboard'] = one_time_keyboard
+            or false,
+            ['selective'] = selective
+            or false
         },
         api.keyboard_meta
     )
