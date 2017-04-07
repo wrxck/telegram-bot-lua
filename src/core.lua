@@ -9,7 +9,7 @@
                        __/ |
                       |___/
 
-      Version 1.1.0-0
+      Version 1.1.1-0
       Copyright (c) 2017 Matthew Hesketh
       See LICENSE for details
 
@@ -112,7 +112,12 @@ function api.request(endpoint, parameters, file)
         return false, res
     elseif not jdat.ok
     then
-        print(jdat.description .. ' [' .. jdat.error_code .. ']')
+        print(
+            '\n' .. jdat.description .. ' [' .. jdat.error_code .. ']\n\nPayload: ' .. json.encode(
+                parameters,
+                { ['indent'] = true }
+            ) .. '\n'
+        )
         return false, jdat
     end
     return jdat, code
@@ -167,7 +172,7 @@ function api.send_message(message, text, parse_mode, disable_web_page_preview, d
             ['disable_notification'] = disable_notification
             or false,
             ['reply_to_message_id'] = reply_to_message_id,
-            ['reply_markup'] = reply_markup
+            ['reply_markup'] = reply_markup or nil
         }
     )
 end
@@ -209,7 +214,7 @@ function api.send_reply(message, text, parse_mode, disable_web_page_preview, rep
             ['disable_web_page_preview'] = disable_web_page_preview,
             ['disable_notification'] = false,
             ['reply_to_message_id'] = message.message_id,
-            ['reply_markup'] = reply_markup
+            ['reply_markup'] = reply_markup or nil
         }
     )
 end
@@ -239,7 +244,7 @@ function api.send_photo(chat_id, photo, caption, disable_notification, reply_to_
             ['disable_notification'] = disable_notification
             or false,
             ['reply_to_message_id'] = reply_to_message_id,
-            ['reply_markup'] = reply_markup
+            ['reply_markup'] = reply_markup or nil
         },
         {
             ['photo'] = photo
@@ -262,7 +267,7 @@ function api.send_audio(chat_id, audio, caption, duration, performer, title, dis
             ['disable_notification'] = disable_notification
             or false,
             ['reply_to_message_id'] = reply_to_message_id,
-            ['reply_markup'] = reply_markup
+            ['reply_markup'] = reply_markup or nil
         },
         {
             ['audio'] = audio
@@ -282,7 +287,7 @@ function api.send_document(chat_id, document, caption, disable_notification, rep
             ['disable_notification'] = disable_notification
             or false,
             ['reply_to_message_id'] = reply_to_message_id,
-            ['reply_markup'] = reply_markup
+            ['reply_markup'] = reply_markup or nil
         },
         {
             ['document'] = document
@@ -301,7 +306,7 @@ function api.send_sticker(chat_id, sticker, disable_notification, reply_to_messa
             ['disable_notification'] = disable_notification
             or false,
             ['reply_to_message_id'] = reply_to_message_id,
-            ['reply_markup'] = reply_markup
+            ['reply_markup'] = reply_markup or nil
         },
         {
             ['sticker'] = sticker
@@ -324,7 +329,7 @@ function api.send_video(chat_id, video, duration, width, height, caption, disabl
             ['disable_notification'] = disable_notification
             or false,
             ['reply_to_message_id'] = reply_to_message_id,
-            ['reply_markup'] = reply_markup
+            ['reply_markup'] = reply_markup or nil
         },
         {
             ['video'] = video
@@ -344,7 +349,7 @@ function api.send_voice(chat_id, voice, caption, duration, disable_notification,
             ['duration'] = duration,
             ['disable_notification'] = disable_notification,
             ['reply_to_message_id'] = reply_to_message_id,
-            ['reply_markup'] = reply_markup
+            ['reply_markup'] = reply_markup or nil
         },
         {
             ['voice'] = voice
@@ -365,7 +370,7 @@ function api.send_location(chat_id, latitude, longitude, disable_notification, r
             ['disable_notification'] = disable_notification
             or false,
             ['reply_to_message_id'] = reply_to_message_id,
-            ['reply_markup'] = reply_markup
+            ['reply_markup'] = reply_markup or nil
         }
     )
 end
@@ -386,7 +391,7 @@ function api.send_venue(chat_id, latitude, longitude, title, address, foursquare
             ['disable_notification'] = disable_notification
             or false,
             ['reply_to_message_id'] = reply_to_message_id,
-            ['reply_markup'] = reply_markup
+            ['reply_markup'] = reply_markup or nil
         }
     )
 end
@@ -405,7 +410,7 @@ function api.send_contact(chat_id, phone_number, first_name, last_name, disable_
             ['disable_notification'] = disable_notification
             or false,
             ['reply_to_message_id'] = reply_to_message_id,
-            ['reply_markup'] = reply_markup
+            ['reply_markup'] = reply_markup or nil
         }
     )
 end
@@ -556,7 +561,7 @@ function api.edit_message_text(chat_id, message_id, text, parse_mode, disable_we
             ['text'] = text,
             ['parse_mode'] = parse_mode,
             ['disable_web_page_preview'] = disable_web_page_preview,
-            ['reply_markup'] = reply_markup
+            ['reply_markup'] = reply_markup or nil
         }
     )
 end
@@ -572,7 +577,7 @@ function api.edit_message_caption(chat_id, message_id, caption, reply_markup, in
             ['message_id'] = message_id,
             ['inline_message_id'] = inline_message_id,
             ['caption'] = caption,
-            ['reply_markup'] = reply_markup
+            ['reply_markup'] = reply_markup or nil
         }
     )
 end
@@ -587,7 +592,7 @@ function api.edit_message_reply_markup(chat_id, message_id, inline_message_id, r
             ['chat_id'] = chat_id,
             ['message_id'] = message_id,
             ['inline_message_id'] = inline_message_id,
-            ['reply_markup'] = reply_markup
+            ['reply_markup'] = reply_markup or nil
         }
     )
 end
@@ -632,7 +637,7 @@ function api.send_game(chat_id, game_short_name, disable_notification, reply_to_
             ['disable_notification'] = disable_notification
             or false,
             ['reply_to_message_id'] = reply_to_message_id,
-            ['reply_markup'] = reply_markup
+            ['reply_markup'] = reply_markup or nil
         }
     )
 end
@@ -835,7 +840,7 @@ function api.send_inline_article(inline_query_id, title, description, message_te
                         ['message_text'] = message_text,
                         ['parse_mode'] = parse_mode
                     },
-                    ['reply_markup'] = reply_markup
+                    ['reply_markup'] = reply_markup or nil
                 }
             }
         )
@@ -857,7 +862,7 @@ function api.send_inline_article_url(inline_query_id, title, url, hide_url, inpu
                     ['hide_url'] = hide_url
                     or false,
                     ['input_message_content'] = input_message_content,
-                    ['reply_markup'] = reply_markup
+                    ['reply_markup'] = reply_markup or nil
                 }
             }
         )
@@ -890,7 +895,7 @@ function api.inline_result_meta:input_message_content(input_message_content)
 end
 
 function api.inline_result_meta:reply_markup(reply_markup)
-    self['reply_markup'] = reply_markup
+    self['reply_markup'] = reply_markup or nil
     return self
 end
 
@@ -1089,7 +1094,7 @@ function api.send_inline_photo(inline_query_id, photo_url, caption, reply_markup
                     ['photo_url'] = photo_url,
                     ['thumb_url'] = photo_url,
                     ['caption'] = caption,
-                    ['reply_markup'] = reply_markup
+                    ['reply_markup'] = reply_markup or nil
                 }
             }
         )
@@ -1106,7 +1111,7 @@ function api.send_inline_cached_photo(inline_query_id, photo_file_id, caption, r
                     ['id'] = '1',
                     ['photo_file_id'] = photo_file_id,
                     ['caption'] = caption,
-                    ['reply_markup'] = reply_markup
+                    ['reply_markup'] = reply_markup or nil
                 }
             }
         )
