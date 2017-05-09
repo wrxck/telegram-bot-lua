@@ -680,6 +680,16 @@ function api.get_chat(chat_id) -- https://core.telegram.org/bots/api#getchat
     )
 end
 
+function api.delete_message(chat_id, message_id)
+    return api.request(
+        'https://api.telegram.org/bot' .. api.token .. '/deleteMessage',
+        {
+            ['chat_id'] = chat_id,
+            ['message_id'] = message_id
+        }
+    )
+end
+
 function api.on_update(update)
 end
 
