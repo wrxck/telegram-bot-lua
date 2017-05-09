@@ -1,4 +1,4 @@
-rockspec_format = "1.2.0"
+rockspec_format = "1.2.0-0"
 package = "telegram-bot-lua"
 version = "1.2.0-0"
 
