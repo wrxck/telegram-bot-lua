@@ -9,7 +9,7 @@
                        __/ |
                       |___/
 
-      Version 1.1.1-0
+      Version 1.2.1-0
       Copyright (c) 2017 Matthew Hesketh
       See LICENSE for details
 
@@ -127,12 +127,18 @@ function api.get_me()
     return api.request('https://api.telegram.org/bot' .. api.token .. '/getMe')
 end
 
-function api.get_updates(timeout, offset, limit, allowed_updates) -- https://core.telegram.org/bots/api#getupdates
+function api.get_updates(timeout, offset, limit, allowed_updates, use_beta_endpoint) -- https://core.telegram.org/bots/api#getupdates
     allowed_updates = type(allowed_updates) == 'table'
     and json.encode(allowed_updates)
     or allowed_updates
     return api.request(
-        'https://api.telegram.org/bot' .. api.token .. '/getUpdates',
+        string.format(
+            'https://api.telegram.org/%sbot%s/getUpdates',
+            use_beta_endpoint
+            and 'beta/'
+            or '',
+            api.token
+        ),
         {
             ['timeout'] = timeout,
             ['offset'] = offset,
