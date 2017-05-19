@@ -1,5 +1,5 @@
 package = "telegram-bot-lua"
-version = "1.2.1-0"
+version = "1.3-0"
 
 source = {
     url = "git://github.com/wrxck/telegram-bot-lua.git",

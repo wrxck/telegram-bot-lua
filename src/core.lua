@@ -9,7 +9,7 @@
                        __/ |
                       |___/
 
-      Version 1.2.1-0
+      Version 1.3-0
       Copyright (c) 2017 Matthew Hesketh
       See LICENSE for details
 
@@ -363,6 +363,26 @@ function api.send_voice(chat_id, voice, caption, duration, disable_notification,
     )
 end
 
+function api.send_video_note(chat_id, video_note, duration, length, disable_notification, reply_to_message_id, reply_markup) -- https://core.telegram.org/bots/api#sendvideonote
+    reply_markup = type(reply_markup) == 'table'
+    and json.encode(reply_markup)
+    or reply_markup
+    return api.request(
+        'https://api.telegram.org/bot' .. api.token .. '/sendVideoNote',
+        {
+            ['chat_id'] = chat_id,
+            ['duration'] = duration,
+            ['length'] = length,
+            ['disable_notification'] = disable_notification,
+            ['reply_to_message_id'] = reply_to_message_id,
+            ['reply_markup'] = reply_markup or nil
+        },
+        {
+            ['video_note'] = video_note
+        }
+    )
+end
+
 function api.send_location(chat_id, latitude, longitude, disable_notification, reply_to_message_id, reply_markup) -- https://core.telegram.org/bots/api#sendlocation
     reply_markup = type(reply_markup) == 'table'
     and json.encode(reply_markup)
@@ -603,6 +623,16 @@ function api.edit_message_reply_markup(chat_id, message_id, inline_message_id, r
     )
 end
 
+function api.delete_message(chat_id, message_id) -- https://core.telegram.org/bots/api#deletemessage
+    return api.request(
+        'https://api.telegram.org/bot' .. api.token .. '/deleteMessage',
+        {
+            ['chat_id'] = chat_id,
+            ['message_id'] = message_id
+        }
+    )
+end
+
 function api.answer_inline_query(inline_query_id, results, cache_time, is_personal, next_offset, switch_pm_text, switch_pm_parameter) -- https://core.telegram.org/bots/api#answerinlinequery
     if results
     and type(results) == 'table'
@@ -686,12 +716,53 @@ function api.get_chat(chat_id) -- https://core.telegram.org/bots/api#getchat
     )
 end
 
-function api.delete_message(chat_id, message_id)
+function api.send_invoice(chat_id, title, description, payload, provider_token, start_parameter, currency, prices, photo_url, photo_size, photo_width, photo_height, need_name, need_phone_number, need_email, need_shipping_address, is_flexible, disable_notification, reply_to_message_id, reply_markup)
     return api.request(
-        'https://api.telegram.org/bot' .. api.token .. '/deleteMessage',
+        'https://api.telegram.org/bot' .. api.token .. '/sendInvoice',
         {
             ['chat_id'] = chat_id,
-            ['message_id'] = message_id
+            ['title'] = title,
+            ['description'] = description,
+            ['payload'] = payload,
+            ['provider_token'] = provider_token,
+            ['start_parameter'] = start_parameter,
+            ['currency'] = currency,
+            ['prices'] = prices,
+            ['photo_url'] = photo_url,
+            ['photo_size'] = photo_size,
+            ['photo_width'] = photo_width,
+            ['photo_height'] = photo_height,
+            ['need_name'] = need_name,
+            ['need_phone_number'] = need_phone_number,
+            ['need_email'] = need_email,
+            ['need_shipping_address'] = need_shipping_address,
+            ['is_flexible'] = is_flexible,
+            ['disable_notification'] = disable_notification,
+            ['reply_to_message_id'] = reply_to_message_id,
+            ['reply_markup'] = reply_markup
+        }
+    )
+end
+
+function api.answer_shipping_query(shipping_query_id, ok, shipping_options, error_message)
+    return api.request(
+        'https://api.telegram.org/bot' .. api.token .. '/answerShippingQuery',
+        {
+            ['shipping_query_id'] = shipping_query_id,
+            ['ok'] = ok,
+            ['shipping_options'] = shipping_options,
+            ['error_message'] = error_message
+        }
+    )
+end
+
+function api.answer_pre_checkout_query(pre_checkout_query_id, ok, error_message)
+    return api.request(
+        'https://api.telegram.org/bot' .. api.token .. '/answerPreCheckoutQuery',
+        {
+            ['pre_checkout_query_id'] = pre_checkout_query_id,
+            ['ok'] = ok,
+            ['error_message'] = error_message
         }
     )
 end
@@ -717,6 +788,12 @@ function api.on_edited_channel_post(edited_channel_post)
 end
 
 function api.on_chosen_inline_result(chosen_inline_result)
+end
+
+function api.on_shipping_query(shipping_query)
+end
+
+function api.on_pre_checkout_query(pre_checkout_query)
 end
 
 function api.process_update(update)
@@ -745,6 +822,12 @@ function api.process_update(update)
     elseif update.chosen_inline_result
     then
         return api.on_chosen_inline_result(update.chosen_inline_result)
+    elseif update.shipping_query
+    then
+        return api.on_shipping_query(update.shipping_query)
+    elseif update.pre_checkout_query
+    then
+        return api.on_pre_checkout_query(update.pre_checkout_query)
     end
     return
 end
@@ -1219,6 +1302,23 @@ function api.callback_game_button(text, callback_game, encoded)
     return button
 end
 
+function api.pay_button(text, pay, encoded)
+    if not text
+    or pay == nil
+    then
+        return false
+    end
+    local button = {
+        ['text'] = tostring(text),
+        ['pay'] = pay
+    }
+    if encoded
+    then
+        button = json.encode(button)
+    end
+    return button
+end
+
 function api.remove_keyboard(selective)
     return {
         ['remove_keyboard'] = true,
@@ -1273,6 +1373,49 @@ function api.inline_keyboard()
     )
 end
 
+api.prices_meta = {}
+api.prices_meta.__index = api.prices_meta
+
+function api.prices_meta:labeled_price(label, amount)
+    table.insert(
+        self,
+        {
+            ['label'] = tostring(label),
+            ['amount'] = tonumber(amount)
+        }
+    )
+    return self
+end
+
+function api.prices()
+    return setmetatable(
+        {},
+        api.prices_meta
+    )
+end
+
+api.shipping_options_meta = {}
+api.shipping_options_meta.__index = api.shipping_options_meta
+
+function api.shipping_options_meta:shipping_option(id, title, prices)
+    table.insert(
+        self,
+        {
+            ['id'] = tostring(id),
+            ['title'] = tostring(title),
+            ['prices'] = prices
+        }
+    )
+    return self
+end
+
+function api.shipping_options()
+    return setmetatable(
+        {},
+        api.shipping_options_meta
+    )
+end
+
 api.row_meta = {}
 api.row_meta.__index = api.row_meta
 
@@ -1320,11 +1463,40 @@ function api.row_meta:switch_inline_query_current_chat_button(text, switch_inlin
     return self
 end
 
+function api.row_meta:pay_button(text, pay)
+    table.insert(
+        self,
+        {
+            ['text'] = tostring(text),
+            ['pay'] = pay
+        }
+    )
+    return self
+end
+
 function api.row(buttons)
     return setmetatable(
         {},
         api.row_meta
     )
+end
+
+function api.labeled_price(label, amount, encoded)
+    if not label
+    or not amount
+    or tonumber(amount) == nil
+    then
+        return false
+    end
+    local button = {
+        ['label'] = tostring(label),
+        ['amount'] = tonumber(amount)
+    }
+    if encoded
+    then
+        button = json.encode(button)
+    end
+    return button
 end
 
 return api

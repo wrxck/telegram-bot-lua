@@ -31,8 +31,13 @@ To handle messages (a.k.a. the `update.message` object), you need to use the `ap
 
 ```Lua
 function api.on_message(message)
-    if message.text and string.match(message.text, 'ping') then
-        api.send_message(message.chat.id, 'pong')
+    if message.text
+    and message.text:match('ping')
+    then
+        api.send_message(
+            message.chat.id,
+            'pong'
+        )
     end
 end
 ```
@@ -43,8 +48,13 @@ To handle channel posts (a.k.a. the `update.channel_post` object), you need to u
 
 ```Lua
 function api.on_channel_post(channel_post)
-    if channel_post.text and string.match(channel_post.text, 'ping') then
-        api.send_message(channel_post.chat.id, 'pong')
+    if channel_post.text
+    and channel_post.text:match('ping')
+    then
+        api.send_message(
+            channel_post.chat.id,
+            'pong'
+        )
     end
 end
 ```
@@ -55,8 +65,13 @@ To handle edited messages (a.k.a. the `update.edited_message` object), you need 
 
 ```Lua
 function api.on_edited_message(edited_message)
-    if edited_message.text and string.match(edited_message.text, 'ping') then
-        api.send_message(edited_message.chat.id, 'pong')
+    if edited_message.text
+    and edited_message.text:match('ping')
+    then
+        api.send_message(
+            edited_message.chat.id,
+            'pong'
+        )
     end
 end
 ```
@@ -65,8 +80,13 @@ To handle edited channel posts (a.k.a. the `update.edited_channel_post` object),
 
 ```Lua
 function api.on_edited_channel_post(edited_channel_post)
-    if edited_channel_post.text and string.match(edited_channel_post.text, 'ping') then
-        api.send_message(edited_channel_post.chat.id, 'pong')
+    if edited_channel_post.text
+    and edited_channel_post.text:match('ping')
+    then
+        api.send_message(
+            edited_channel_post.chat.id,
+            'pong'
+        )
     end
 end
 ```
@@ -77,9 +97,25 @@ To handle inline queries (a.k.a. the `update.inline_query` object), you need to 
 function api.on_inline_query(inline_query)
     api.answer_inline_query(
         inline_query.id,
-        api.inline_result():type('article'):id(1):title('Title'):description('Description'):input_message_content(
+        api.inline_result()
+        :type('article')
+        :id(1)
+        :title('Title')
+        :description('Description')
+        :input_message_content(
             api.input_text_message_content('Message')
         )
+    )
+end
+```
+
+To handle shipping queries (a.k.a. the `update.shipping_query` object), you need to use the `api.on_shipping_query(shipping_query)` function. The example shown below would iterate over every `update.shipping_query` object, and print it's JSON-encoded version to the terminal:
+
+```Lua
+function api.on_shipping_query(shipping_query)
+    local json = require('dkjson')
+    print(
+        json.encode(shipping_query)
     )
 end
 ```
@@ -90,8 +126,9 @@ To handle chosen inline results (a.k.a. the `update.chosen_inline_result` object
 
 ```Lua
 function api.on_chosen_inline_result(chosen_inline_result)
+    local json = require('dkjson')
     print(
-        require('dkjson').encode(chosen_inline_result)
+        json.encode(chosen_inline_result)
     )
 end
 ```
@@ -104,21 +141,43 @@ function api.on_callback_query(callback_query)
         callback_query.id,
         callback_query.from.id
     )
-)
+end
 ```
 
 Although it's recommended to do so, you're not limited to handling specific update types through these functions – to do something with the original `update` object, use the function `api.on_update(update)`. The example shown below would iterate over every `update` object, and print the update type to the terminal:
 
 ```Lua
 function api.on_update(update)
-    if update.message then print('message')
-    elseif update.edited_message then print('edited message')
-    elseif update.channel_post then print('channel post')
-    elseif update.edited_channel_post then print('edited channel post')
-    elseif update.inline_query then print('inline query')
-    elseif update.callback_query then print('callback query')
-    elseif update.chosen_inline_result then print('chosen inline result')
-    else print('unknown update type')
+    if update.message
+    then
+        print('message')
+    elseif update.edited_message
+    then
+        print('edited message')
+    elseif update.channel_post
+    then
+        print('channel post')
+    elseif update.edited_channel_post
+    then
+        print('edited channel post')
+    elseif update.inline_query
+    then
+        print('inline query')
+    elseif update.callback_query
+    then
+        print('callback query')
+    elseif update.chosen_inline_result
+    then
+        print('chosen inline result')
+    elseif update.shipping_query
+    then
+        print('shipping query')
+    elseif update.pre_checkout_query
+    then
+        print('pre checkout query')
+    else
+        print('unknown update type')
+    end
 end
 ```
 
