@@ -785,6 +785,58 @@ api.answer_inline_query(
 | is\_personal          | Boolean                    | Optional   | Pass True, if results may be cached on the server side only for the user that sent the query. By default, results may be returned to any user who sends the same query                                                             |
 | next\_offset          | String                     | Optional   | Pass the offset that a client should send in the next query with the same text to receive more results. Pass an empty string if there are no more results or if you don‘t support pagination. Offset length can’t exceed 64 bytes. |
 
+#### sendInvoice
+
+Use this function to send invoices, using Telegram's `sendInvoice` method.
+
+```Lua
+api.send_invoice(
+    chat_id,
+    title,
+    description,
+    payload,
+    provider_token,
+    start_parameter,
+    currency,
+    prices,
+    photo_url,
+    photo_size,
+    photo_width,
+    photo_height,
+    need_name,
+    need_phone_number,
+    need_email,
+    need_shipping_address,
+    is_flexible,
+    disable_notification,
+    reply_to_message_id,
+    reply_markup
+)
+```
+
+| Parameters              | Type                  | Required | Description                                                                                                                                                             |
+|-------------------------|-----------------------|----------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| chat\_id                | Integer               | Yes      | Unique identifier for the target private chat                                                                                                                           |
+| title                   | String                | Yes      | Product name                                                                                                                                                            |
+| description             | String                | Yes      | Product description                                                                                                                                                     |
+| payload                 | String                | Yes      | Bot-defined invoice payload, 1-128 bytes. This will not be displayed to the user, use for your internal processes.                                                      |
+| provider\_token         | String                | Yes      | Payments provider token, obtained via Botfather                                                                                                                         |
+| start\_parameter        | String                | Yes      | Unique deep-linking parameter that can be used to generate this invoice when used as a start parameter                                                                  |
+| currency                | String                | Yes      | Three-letter ISO 4217 currency code                                                                                                                                     |
+| prices                  | Array of LabeledPrice | Yes      | Price breakdown, a list of components (e.g. product price, tax, discount, delivery cost, delivery tax, bonus, etc.)                                                     |
+| photo\_url              | String                | Optional | URL of the product photo for the invoice. Can be a photo of the goods or a marketing image for a service. People like it better when they see what they are paying for. |
+| photo\_size             | Integer               | Optional | Photo size                                                                                                                                                              |
+| photo\_width            | Integer               | Optional | Photo width                                                                                                                                                             |
+| photo\_height           | Integer               | Optional | Photo height                                                                                                                                                            |
+| need\_name              | Boolean               | Optional | Pass True, if you require the user's full name to complete the order                                                                                                    |
+| need\_phone\_number     | Boolean               | Optional | Pass True, if you require the user's phone number to complete the order                                                                                                 |
+| need\_email             | Boolean               | Optional | Pass True, if you require the user's email to complete the order                                                                                                        |
+| need\_shipping\_address | Boolean               | Optional | Pass True, if you require the user's shipping address to complete the order                                                                                             |
+| is\_flexible            | Boolean               | Optional | Pass True, if the final price depends on the shipping method                                                                                                            |
+| disable\_notification   | Boolean               | Optional | Sends the message silently. Users will receive a notification with no sound.                                                                                            |
+| reply\_to\_message\_id  | Integer               | Optional | If the message is a reply, ID of the original message                                                                                                                   |
+| reply\_markup           | InlineKeyboardMarkup  | Optional | A JSON-serialized object for an inline keyboard. If empty, one 'Pay total price' button will be shown. If not empty, the first button must be a Pay button.             |
+
 #### sendGame
 
 Use this function to send a game, using Telegram's `sendGame` method.
