@@ -232,6 +232,7 @@ This is what will run your bot!
 | [editMessageReplyMarkup](#editmessagereplymarkup) |
 | [answerInlineQuery](#answerinlinequery)           |
 | [sendInvoice](#sendInvoice)                       |
+| [answerShippingQuery](#answerShippingQuery)       |
 | [sendGame](#sendgame)                             |
 | [setGameScore](#setgamescore)                     |
 | [getGameHighScores](#getgamehighscores)           |
@@ -848,6 +849,26 @@ api.send_invoice(
 | disable\_notification   | Boolean               | Optional | Sends the message silently. Users will receive a notification with no sound.                                                                                            |
 | reply\_to\_message\_id  | Integer               | Optional | If the message is a reply, ID of the original message                                                                                                                   |
 | reply\_markup           | InlineKeyboardMarkup  | Optional | A JSON-serialized object for an inline keyboard. If empty, one 'Pay total price' button will be shown. If not empty, the first button must be a Pay button.             |
+
+#### answerShippingQuery
+
+Use this function to reply to shipping queries using Telegram's `answerShippingQuery` method. If you sent an invoice requesting a shipping address and the parameter `is_flexible` was specified, the Bot API will send an Update with a `shipping_query` field to the bot.
+
+```Lua
+api.answer_shipping_query(
+    shipping_query_id,
+    ok,
+    shipping_options,
+    error_message
+)
+```
+
+| Parameters          | Type                    | Required | Description                                                                                                                                                                                                                             |
+|---------------------|-------------------------|----------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| shipping\_query\_id | String                  | Yes      | Unique identifier for the query to be answered                                                                                                                                                                                          |
+| ok                  | Boolean                 | Yes      | Specify True if delivery to the specified address is possible and False,if there are any problems (for example, if delivery to the specified,address is not possible)                                                                   |
+| shipping\_options   | Array of ShippingOption | Optional | Required if ok is True. A JSON-serialized array of available shipping options.                                                                                                                                                          |
+| error\_message      | String                  | Optional | Required if ok is False. Error message in human readable form,that explains why it is impossible to complete the order (e.g. "Sorry, delivery to your desired address is unavailable'). Telegram will display,this message to the user. |
 
 #### sendGame
 
