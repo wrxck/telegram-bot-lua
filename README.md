@@ -1044,12 +1044,13 @@ api.inline_keyboard():row(
 )
 ```
 
-But wait, this keyboard doesn't have any buttons yet! To add buttons, you need to decide which type of button you are going to use - there are currently 4:
+But wait, this keyboard doesn't have any buttons yet! To add buttons, you need to decide which type of button you are going to use - there are currently 5:
 
 * url
 * callback\_data
 * switch\_inline\_query
 * switch\_inline\_query\_current\_chat
+* pay
 
 To build a URL button, you need to use the following method with the `api.inline_keyboard()` and the `api.row()` functions:
 
@@ -1091,6 +1092,17 @@ api.inline_keyboard():row(
     api.row():switch_inline_query_current_chat_button(
         text,
         switch_inline_query_current_chat
+    )
+)
+```
+
+To build a pay button, you need to use the following method:
+
+```Lua
+api.inline_keyboard():row(
+    api.row():pay_button(
+        text,
+        pay
     )
 )
 ```
