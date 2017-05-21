@@ -109,13 +109,24 @@ function api.on_inline_query(inline_query)
 end
 ```
 
-To handle shipping queries (a.k.a. the `update.shipping_query` object), you need to use the `api.on_shipping_query(shipping_query)` function. The example shown below would iterate over every `update.shipping_query` object, and print it's JSON-encoded version to the terminal:
+To handle shipping queries (a.k.a. the `update.shipping_query` object), you need to use the `api.on_shipping_query(shipping_query)` function. The example shown below would iterate over every `update.shipping_query` object, and print its JSON-encoded version to the terminal:
 
 ```Lua
 function api.on_shipping_query(shipping_query)
     local json = require('dkjson')
     print(
         json.encode(shipping_query)
+    )
+end
+```
+
+To handle pre checkout queries (a.k.a. the `update.pre_checkout_query` object), you need to use the `api.on_pre_checkout_query(pre_checkout_query)` function. The example shown below would iterate over every `update.pre_checkout_query` object, and print its JSON-encoded version to the terminal:
+
+```Lua
+function api.on_pre_checkout_query(pre_checkout_query)
+    local json = require('dkjson')
+    print(
+        json.encode(pre_checkout_query)
     )
 end
 ```
