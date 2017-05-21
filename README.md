@@ -220,6 +220,7 @@ This is what will run your bot!
 | [editMessageCaption](#editmessagecaption)         |
 | [editMessageReplyMarkup](#editmessagereplymarkup) |
 | [answerInlineQuery](#answerinlinequery)           |
+| [sendInvoice](#sendInvoice)                       |
 | [sendGame](#sendgame)                             |
 | [setGameScore](#setgamescore)                     |
 | [getGameHighScores](#getgamehighscores)           |
