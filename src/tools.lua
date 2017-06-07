@@ -1,10 +1,21 @@
 --[[
-    Copyright 2017 Matthew Hesketh <wrxck0@gmail.com>
-    This code is licensed under the GPLv3. See /LICENSE for details.
+
+       _       _                                      _           _          _
+      | |     | |                                    | |         | |        | |
+      | |_ ___| | ___  __ _ _ __ __ _ _ __ ___ ______| |__   ___ | |_ ______| |_   _  __ _
+      | __/ _ \ |/ _ \/ _` | '__/ _` | '_ ` _ \______| '_ \ / _ \| __|______| | | | |/ _` |
+      | ||  __/ |  __/ (_| | | | (_| | | | | | |     | |_) | (_) | |_       | | |_| | (_| |
+       \__\___|_|\___|\__, |_|  \__,_|_| |_| |_|     |_.__/ \___/ \__|      |_|\__,_|\__,_|
+                       __/ |
+                      |___/
+
+      Version 1.3.1-0
+      Copyright (c) 2017 Matthew Hesketh
+      See LICENSE for details
+
 ]]
 
 local tools = {}
-
 local api = require('telegram-bot-lua.core')
 local https = require('ssl.https')
 local http = require('socket.http')

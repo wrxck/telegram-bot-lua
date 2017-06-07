@@ -9,14 +9,13 @@
                        __/ |
                       |___/
 
-      Version 1.3-0
+      Version 1.3.1-0
       Copyright (c) 2017 Matthew Hesketh
       See LICENSE for details
 
 ]]
 
 local api = {}
-
 local https = require('ssl.https')
 local multipart = require('multipart-post')
 local ltn12 = require('ltn12')
@@ -578,7 +577,7 @@ function api.edit_message_text(chat_id, message_id, text, parse_mode, disable_we
     )
     and 'markdown'
     or parse_mode
-    return api.request(
+    local success = api.request(
         'https://api.telegram.org/bot' .. api.token .. '/editMessageText',
         {
             ['chat_id'] = chat_id,
@@ -590,13 +589,29 @@ function api.edit_message_text(chat_id, message_id, text, parse_mode, disable_we
             ['reply_markup'] = reply_markup or nil
         }
     )
+    if not success
+    then
+        return api.request(
+            'https://api.telegram.org/bot' .. api.token .. '/editMessageText',
+            {
+                ['chat_id'] = chat_id,
+                ['message_id'] = inline_message_id,
+                ['inline_message_id'] = message_id,
+                ['text'] = text,
+                ['parse_mode'] = parse_mode,
+                ['disable_web_page_preview'] = disable_web_page_preview,
+                ['reply_markup'] = reply_markup or nil
+            }
+        )
+    end
+    return success
 end
 
 function api.edit_message_caption(chat_id, message_id, caption, reply_markup, inline_message_id) -- https://core.telegram.org/bots/api#editmessagecaption
     reply_markup = type(reply_markup) == 'table'
     and json.encode(reply_markup)
     or reply_markup
-    return api.request(
+    local success = api.request(
         'https://api.telegram.org/bot' .. api.token .. '/editMessageCaption',
         {
             ['chat_id'] = chat_id,
@@ -606,13 +621,27 @@ function api.edit_message_caption(chat_id, message_id, caption, reply_markup, in
             ['reply_markup'] = reply_markup or nil
         }
     )
+    if not success
+    then
+        return api.request(
+            'https://api.telegram.org/bot' .. api.token .. '/editMessageCaption',
+            {
+                ['chat_id'] = chat_id,
+                ['message_id'] = inline_message_id,
+                ['inline_message_id'] = message_id,
+                ['caption'] = caption,
+                ['reply_markup'] = reply_markup or nil
+            }
+        )
+    end
+    return success
 end
 
 function api.edit_message_reply_markup(chat_id, message_id, inline_message_id, reply_markup) -- https://core.telegram.org/bots/api#editmessagereplymarkup
     reply_markup = type(reply_markup) == 'table'
     and json.encode(reply_markup)
     or reply_markup
-    return api.request(
+    local success = api.request(
         'https://api.telegram.org/bot' .. api.token .. '/editMessageReplyMarkup',
         {
             ['chat_id'] = chat_id,
@@ -621,6 +650,19 @@ function api.edit_message_reply_markup(chat_id, message_id, inline_message_id, r
             ['reply_markup'] = reply_markup or nil
         }
     )
+    if not success
+    then
+        return api.request(
+            'https://api.telegram.org/bot' .. api.token .. '/editMessageReplyMarkup',
+            {
+                ['chat_id'] = chat_id,
+                ['message_id'] = inline_message_id,
+                ['inline_message_id'] = message_id,
+                ['reply_markup'] = reply_markup or nil
+            }
+        )
+    end
+    return success
 end
 
 function api.delete_message(chat_id, message_id) -- https://core.telegram.org/bots/api#deletemessage
