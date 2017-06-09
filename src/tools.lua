@@ -9,7 +9,7 @@
                        __/ |
                       |___/
 
-      Version 1.3.1-0
+      Version 1.3.2-0
       Copyright (c) 2017 Matthew Hesketh
       See LICENSE for details
 
@@ -181,7 +181,7 @@ function tools.get_linked_name(id)
     return output
 end
 
-function tools.download_file(url, name)
+function tools.download_file(url, name, path)
     name = name
     or string.format(
         '%s.%s',
@@ -207,39 +207,26 @@ function tools.download_file(url, name)
     then
         return false
     end
+    path = path
+    and tostring(path)
+    or '/tmp/'
+    if not path:match('^/')
+    then
+        path = '/' .. path
+    end
+    if not path:match('/$')
+    then
+        path = path .. '/'
+    end
     local file = io.open(
-        '/tmp/' .. name,
+        path .. name,
         'w+'
     )
     file:write(
         table.concat(body)
     )
     file:close()
-    return '/tmp/' .. name
-end
-
-function tools.get_redis_hash(k, v)
-    if type(k) == 'table'
-    then
-        k = k.chat.id
-    end
-    return string.format(
-        'chat:%s:%s',
-        k,
-        v
-    )
-end
-
-function tools.get_user_redis_hash(k, v)
-    if type(k) == 'table'
-    then
-        k = k.id
-    end
-    return string.format(
-        'user:%s:%s',
-        k,
-        v
-    )
+    return path .. name
 end
 
 function tools.get_word(str, i)
@@ -285,5 +272,22 @@ tools.symbols = {
     ['bullet'] = utf8.char(8226),
     ['bullet_point'] = utf8.char(8226)
 }
+
+function tools.create_link(text, link, parse_mode)
+    text = tostring(text)
+    parse_mode = (
+        parse_mode == true
+        and 'markdown'
+    )
+    or tostring(parse_mode)
+    if not link
+    then
+        return text
+    elseif parse_mode:lower() == 'markdown'
+    then
+        return '[' .. tools.escape_markdown(text) .. '](' .. tools.escape_markdown(link) .. ')'
+    end
+    return '<a href="' .. tools.escape_html(link) .. '">' .. tools.escape_html(text) .. '</a>'
+end
 
 return tools

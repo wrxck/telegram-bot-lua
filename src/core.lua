@@ -9,7 +9,7 @@
                        __/ |
                       |___/
 
-      Version 1.3.1-0
+      Version 1.3.2-0
       Copyright (c) 2017 Matthew Hesketh
       See LICENSE for details
 
