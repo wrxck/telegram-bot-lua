@@ -9,7 +9,7 @@
                        __/ |
                       |___/
 
-      Version 1.3.2-0
+      Version 1.4-0
       Copyright (c) 2017 Matthew Hesketh
       See LICENSE for details
 
@@ -471,12 +471,13 @@ function api.get_file(file_id) -- https://core.telegram.org/bots/api#getfile
     )
 end
 
-function api.ban_chat_member(chat_id, user_id) -- https://core.telegram.org/bots/api#kickchatmember
+function api.ban_chat_member(chat_id, user_id, until_date) -- https://core.telegram.org/bots/api#kickchatmember
     return api.request(
         'https://api.telegram.org/bot' .. api.token .. '/kickChatMember',
         {
             ['chat_id'] = chat_id,
-            ['user_id'] = user_id
+            ['user_id'] = user_id,
+            ['until_date'] = until_date
         }
     )
 end
@@ -503,7 +504,7 @@ end
 function api.unban_chat_member(chat_id, user_id) -- https://core.telegram.org/bots/api#unbanchatmember
     local success
     for i = 1, 3 -- Repeat 3 times to ensure the user was unbanned (I've encountered issues before so
-    -- this is for precautionary measures.
+    -- this is for precautionary measures.)
     do
         success = api.request(
             'https://api.telegram.org/bot' .. api.token .. '/unbanChatMember',
@@ -514,6 +515,109 @@ function api.unban_chat_member(chat_id, user_id) -- https://core.telegram.org/bo
         )
     end
     return success
+end
+
+function api.restrict_chat_member(chat_id, user_id, until_date, can_send_messages, can_send_media_messages, can_send_other_messages, can_add_web_page_previews) -- https://core.telegram.org/bots/api#restrictchatmember
+    return api.request(
+        'https://api.telegram.org/bot' .. api.token .. '/restrictChatMember',
+        {
+            ['chat_id'] = chat_id,
+            ['user_id'] = user_id,
+            ['until_date'] = until_date,
+            ['can_send_messages'] = can_send_messages,
+            ['can_send_media_messages'] = can_send_media_messages,
+            ['can_send_other_messages'] = can_send_other_messages,
+            ['can_add_web_page_previews'] = can_add_web_page_previews
+        }
+    )
+end
+
+function api.promote_chat_member(chat_id, user_id, can_change_info, can_post_messages, can_edit_messages, can_delete_messages, can_invite_users, can_restrict_members, can_pin_messages, can_promote_members) -- https://core.telegram.org/bots/api#promotechatmember
+    return api.request(
+        'https://api.telegram.org/bot' .. api.token .. '/promoteChatMember',
+        {
+            ['chat_id'] = chat_id,
+            ['user_id'] = user_id,
+            ['can_change_info'] = can_change_info,
+            ['can_post_messages'] = can_post_messages,
+            ['can_edit_messages'] = can_edit_messages,
+            ['can_delete_messages'] = can_delete_messages,
+            ['can_invite_users'] = can_invite_users,
+            ['can_restrict_members'] = can_restrict_members,
+            ['can_pin_messages'] = can_pin_messages,
+            ['can_promote_members'] = can_promote_members
+        }
+    )
+end
+
+function api.export_chat_invite_link(chat_id) -- https://core.telegram.org/bots/api#exportchatinvitelink
+    return api.request(
+        'https://api.telegram.org/bot' .. api.token .. '/exportChatInviteLink',
+        {
+            ['chat_id'] = chat_id
+        }
+    )
+end
+
+function api.set_chat_photo(chat_id, photo) -- https://core.telegram.org/bots/api#setchatphoto
+    return api.request(
+        'https://api.telegram.org/bot' .. api.token .. '/setChatPhoto',
+        {
+            ['chat_id'] = chat_id
+        },
+        {
+            ['photo'] = photo
+        }
+    )
+end
+
+function api.delete_chat_photo(chat_id) -- https://core.telegram.org/bots/api#deletechatphoto
+    return api.request(
+        'https://api.telegram.org/bot' .. api.token .. '/deleteChatPhoto',
+        {
+            ['chat_id'] = chat_id
+        }
+    )
+end
+
+function api.set_chat_title(chat_id, title) -- https://core.telegram.org/bots/api#setchattitle
+    return api.request(
+        'https://api.telegram.org/bot' .. api.token .. '/setChatTitle',
+        {
+            ['chat_id'] = chat_id,
+            ['title'] = title
+        }
+    )
+end
+
+function api.set_chat_description(chat_id, description) -- https://core.telegram.org/bots/api#setchatdescription
+    return api.request(
+        'https://api.telegram.org/bot' .. api.token .. '/setChatDescription',
+        {
+            ['chat_id'] = chat_id,
+            ['description'] = description
+        }
+    )
+end
+
+function api.pin_chat_message(chat_id, message_id, disable_notification) -- https://core.telegram.org/bots/api#pinchatmessage
+    return api.request(
+        'https://api.telegram.org/bot' .. api.token .. '/pinChatMessage',
+        {
+            ['chat_id'] = chat_id,
+            ['message_id'] = message_id,
+            ['disable_notification'] = disable_notification
+        }
+    )
+end
+
+function api.unpin_chat_message(chat_id) -- https://core.telegram.org/bots/api#unpinchatmessage
+    return api.request(
+        'https://api.telegram.org/bot' .. api.token .. '/unpinChatMessage',
+        {
+            ['chat_id'] = chat_id
+        }
+    )
 end
 
 function api.leave_chat(chat_id) -- https://core.telegram.org/bots/api#leavechat
