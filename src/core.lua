@@ -9,7 +9,7 @@
                        __/ |
                       |___/
 
-      Version 1.4-0
+      Version 1.5-0
       Copyright (c) 2017 Matthew Hesketh
       See LICENSE for details
 
@@ -83,7 +83,9 @@ function api.request(endpoint, parameters, file)
         end
     end
     parameters = next(parameters) == nil
-    and { '' }
+    and {
+        ''
+    }
     or parameters
     local response = {}
     local body, boundary = multipart.encode(parameters)
@@ -114,7 +116,9 @@ function api.request(endpoint, parameters, file)
         print(
             '\n' .. jdat.description .. ' [' .. jdat.error_code .. ']\n\nPayload: ' .. json.encode(
                 parameters,
-                { ['indent'] = true }
+                {
+                    ['indent'] = true
+                }
             ) .. '\n'
         )
         return false, jdat
@@ -148,9 +152,6 @@ function api.get_updates(timeout, offset, limit, allowed_updates, use_beta_endpo
 end
 
 function api.send_message(message, text, parse_mode, disable_web_page_preview, disable_notification, reply_to_message_id, reply_markup) -- https://core.telegram.org/bots/api#sendmessage
-    disable_web_page_preview = disable_web_page_preview == nil
-    and true
-    or disable_web_page_preview
     reply_markup = type(reply_markup) == 'table'
     and json.encode(reply_markup)
     or reply_markup
@@ -174,15 +175,14 @@ function api.send_message(message, text, parse_mode, disable_web_page_preview, d
             ['text'] = text,
             ['parse_mode'] = parse_mode,
             ['disable_web_page_preview'] = disable_web_page_preview,
-            ['disable_notification'] = disable_notification
-            or false,
+            ['disable_notification'] = disable_notification,
             ['reply_to_message_id'] = reply_to_message_id,
-            ['reply_markup'] = reply_markup or nil
+            ['reply_markup'] = reply_markup
         }
     )
 end
 
-function api.send_reply(message, text, parse_mode, disable_web_page_preview, reply_markup) -- A variant of api.send_message(), optimised for sending a message as a reply.
+function api.send_reply(message, text, parse_mode, disable_web_page_preview, reply_markup, disable_notification) -- A variant of api.send_message(), optimised for sending a message as a reply.
     if type(message) ~= 'table'
     or (
         type(message) == 'table'
@@ -198,9 +198,6 @@ function api.send_reply(message, text, parse_mode, disable_web_page_preview, rep
     then
         return false
     end
-    disable_web_page_preview = disable_web_page_preview == nil
-    and true
-    or disable_web_page_preview
     reply_markup = type(reply_markup) == 'table'
     and json.encode(reply_markup)
     or reply_markup
@@ -217,9 +214,9 @@ function api.send_reply(message, text, parse_mode, disable_web_page_preview, rep
             ['text'] = text,
             ['parse_mode'] = parse_mode,
             ['disable_web_page_preview'] = disable_web_page_preview,
-            ['disable_notification'] = false,
+            ['disable_notification'] = disable_notification,
             ['reply_to_message_id'] = message.message_id,
-            ['reply_markup'] = reply_markup or nil
+            ['reply_markup'] = reply_markup
         }
     )
 end
@@ -230,8 +227,7 @@ function api.forward_message(chat_id, from_chat_id, disable_notification, messag
         {
             ['chat_id'] = chat_id,
             ['from_chat_id'] = from_chat_id,
-            ['disable_notification'] = disable_notification
-            or false,
+            ['disable_notification'] = disable_notification,
             ['message_id'] = message_id
         }
     )
@@ -246,10 +242,9 @@ function api.send_photo(chat_id, photo, caption, disable_notification, reply_to_
         {
             ['chat_id'] = chat_id,
             ['caption'] = caption,
-            ['disable_notification'] = disable_notification
-            or false,
+            ['disable_notification'] = disable_notification,
             ['reply_to_message_id'] = reply_to_message_id,
-            ['reply_markup'] = reply_markup or nil
+            ['reply_markup'] = reply_markup
         },
         {
             ['photo'] = photo
@@ -269,10 +264,9 @@ function api.send_audio(chat_id, audio, caption, duration, performer, title, dis
             ['duration'] = duration,
             ['performer'] = performer,
             ['title'] = title,
-            ['disable_notification'] = disable_notification
-            or false,
+            ['disable_notification'] = disable_notification,
             ['reply_to_message_id'] = reply_to_message_id,
-            ['reply_markup'] = reply_markup or nil
+            ['reply_markup'] = reply_markup
         },
         {
             ['audio'] = audio
@@ -289,10 +283,9 @@ function api.send_document(chat_id, document, caption, disable_notification, rep
         {
             ['chat_id'] = chat_id,
             ['caption'] = caption,
-            ['disable_notification'] = disable_notification
-            or false,
+            ['disable_notification'] = disable_notification,
             ['reply_to_message_id'] = reply_to_message_id,
-            ['reply_markup'] = reply_markup or nil
+            ['reply_markup'] = reply_markup
         },
         {
             ['document'] = document
@@ -308,10 +301,9 @@ function api.send_sticker(chat_id, sticker, disable_notification, reply_to_messa
         'https://api.telegram.org/bot' .. api.token .. '/sendSticker',
         {
             ['chat_id'] = chat_id,
-            ['disable_notification'] = disable_notification
-            or false,
+            ['disable_notification'] = disable_notification,
             ['reply_to_message_id'] = reply_to_message_id,
-            ['reply_markup'] = reply_markup or nil
+            ['reply_markup'] = reply_markup
         },
         {
             ['sticker'] = sticker
@@ -331,10 +323,9 @@ function api.send_video(chat_id, video, duration, width, height, caption, disabl
             ['width'] = width,
             ['height'] = height,
             ['caption'] = caption,
-            ['disable_notification'] = disable_notification
-            or false,
+            ['disable_notification'] = disable_notification,
             ['reply_to_message_id'] = reply_to_message_id,
-            ['reply_markup'] = reply_markup or nil
+            ['reply_markup'] = reply_markup
         },
         {
             ['video'] = video
@@ -354,7 +345,7 @@ function api.send_voice(chat_id, voice, caption, duration, disable_notification,
             ['duration'] = duration,
             ['disable_notification'] = disable_notification,
             ['reply_to_message_id'] = reply_to_message_id,
-            ['reply_markup'] = reply_markup or nil
+            ['reply_markup'] = reply_markup
         },
         {
             ['voice'] = voice
@@ -374,7 +365,7 @@ function api.send_video_note(chat_id, video_note, duration, length, disable_noti
             ['length'] = length,
             ['disable_notification'] = disable_notification,
             ['reply_to_message_id'] = reply_to_message_id,
-            ['reply_markup'] = reply_markup or nil
+            ['reply_markup'] = reply_markup
         },
         {
             ['video_note'] = video_note
@@ -392,10 +383,9 @@ function api.send_location(chat_id, latitude, longitude, disable_notification, r
             ['chat_id'] = chat_id,
             ['latitude'] = latitude,
             ['longitude'] = longitude,
-            ['disable_notification'] = disable_notification
-            or false,
+            ['disable_notification'] = disable_notification,
             ['reply_to_message_id'] = reply_to_message_id,
-            ['reply_markup'] = reply_markup or nil
+            ['reply_markup'] = reply_markup
         }
     )
 end
@@ -413,10 +403,9 @@ function api.send_venue(chat_id, latitude, longitude, title, address, foursquare
             ['title'] = title,
             ['address'] = address,
             ['foursquare_id'] = foursquare_id,
-            ['disable_notification'] = disable_notification
-            or false,
+            ['disable_notification'] = disable_notification,
             ['reply_to_message_id'] = reply_to_message_id,
-            ['reply_markup'] = reply_markup or nil
+            ['reply_markup'] = reply_markup
         }
     )
 end
@@ -432,10 +421,9 @@ function api.send_contact(chat_id, phone_number, first_name, last_name, disable_
             ['phone_number'] = phone_number,
             ['first_name'] = first_name,
             ['last_name'] = last_name,
-            ['disable_notification'] = disable_notification
-            or false,
+            ['disable_notification'] = disable_notification,
             ['reply_to_message_id'] = reply_to_message_id,
-            ['reply_markup'] = reply_markup or nil
+            ['reply_markup'] = reply_markup
         }
     )
 end
@@ -663,8 +651,7 @@ function api.answer_callback_query(callback_query_id, text, show_alert, url, cac
         {
             ['callback_query_id'] = callback_query_id,
             ['text'] = text,
-            ['show_alert'] = show_alert
-            or false,
+            ['show_alert'] = show_alert,
             ['url'] = url,
             ['cache_time'] = cache_time
         }
@@ -690,7 +677,7 @@ function api.edit_message_text(chat_id, message_id, text, parse_mode, disable_we
             ['text'] = text,
             ['parse_mode'] = parse_mode,
             ['disable_web_page_preview'] = disable_web_page_preview,
-            ['reply_markup'] = reply_markup or nil
+            ['reply_markup'] = reply_markup
         }
     )
     if not success
@@ -704,7 +691,7 @@ function api.edit_message_text(chat_id, message_id, text, parse_mode, disable_we
                 ['text'] = text,
                 ['parse_mode'] = parse_mode,
                 ['disable_web_page_preview'] = disable_web_page_preview,
-                ['reply_markup'] = reply_markup or nil
+                ['reply_markup'] = reply_markup
             }
         )
     end
@@ -722,7 +709,7 @@ function api.edit_message_caption(chat_id, message_id, caption, reply_markup, in
             ['message_id'] = message_id,
             ['inline_message_id'] = inline_message_id,
             ['caption'] = caption,
-            ['reply_markup'] = reply_markup or nil
+            ['reply_markup'] = reply_markup
         }
     )
     if not success
@@ -734,7 +721,7 @@ function api.edit_message_caption(chat_id, message_id, caption, reply_markup, in
                 ['message_id'] = inline_message_id,
                 ['inline_message_id'] = message_id,
                 ['caption'] = caption,
-                ['reply_markup'] = reply_markup or nil
+                ['reply_markup'] = reply_markup
             }
         )
     end
@@ -751,7 +738,7 @@ function api.edit_message_reply_markup(chat_id, message_id, inline_message_id, r
             ['chat_id'] = chat_id,
             ['message_id'] = message_id,
             ['inline_message_id'] = inline_message_id,
-            ['reply_markup'] = reply_markup or nil
+            ['reply_markup'] = reply_markup
         }
     )
     if not success
@@ -762,7 +749,7 @@ function api.edit_message_reply_markup(chat_id, message_id, inline_message_id, r
                 ['chat_id'] = chat_id,
                 ['message_id'] = inline_message_id,
                 ['inline_message_id'] = message_id,
-                ['reply_markup'] = reply_markup or nil
+                ['reply_markup'] = reply_markup
             }
         )
     end
@@ -775,6 +762,84 @@ function api.delete_message(chat_id, message_id) -- https://core.telegram.org/bo
         {
             ['chat_id'] = chat_id,
             ['message_id'] = message_id
+        }
+    )
+end
+
+function api.get_sticker_set(name) -- https://core.telegram.org/bots/api#getstickerset
+    return api.request(
+        'https://api.telegram.org/bot' .. api.token .. '/getStickerSet',
+        {
+            ['name'] = name
+        }
+    )
+end
+
+function api.upload_sticker_file(user_id, png_sticker) -- https://core.telegram.org/bots/api#uploadstickerfile
+    return api.request(
+        'https://api.telegram.org/bot' .. api.token .. '/uploadStickerFile',
+        {
+            ['user_id'] = user_id
+        },
+        {
+            ['png_sticker'] = png_sticker
+        }
+    )
+end
+
+function api.create_new_sticker_set(user_id, name, title, png_sticker, emojis, contains_masks, mask_position) -- https://core.telegram.org/bots/api#createnewstickerset
+    mask_position = type(mask_position) == 'table'
+    and json.encode(mask_position)
+    or mask_position
+    return api.request(
+        'https://api.telegram.org/bot' .. api.token .. '/createNewStickerSet',
+        {
+            ['user_id'] = user_id,
+            ['name'] = name,
+            ['title'] = title,
+            ['emojis'] = emojis,
+            ['contains_masks'] = contains_masks,
+            ['mask_position'] = mask_position
+        },
+        {
+            ['png_sticker'] = png_sticker
+        }
+    )
+end
+
+function api.add_sticker_to_set(user_id, name, png_sticker, emojis, mask_position) -- https://core.telegram.org/bots/api#addstickertoset
+    mask_position = type(mask_position) == 'table'
+    and json.encode(mask_position)
+    or mask_position
+    return api.request(
+        'https://api.telegram.org/bot' .. api.token .. '/addStickerToSet',
+        {
+            ['user_id'] = user_id,
+            ['name'] = name,
+            ['emojis'] = emojis,
+            ['mask_position'] = mask_position
+        },
+        {
+            ['png_sticker'] = png_sticker
+        }
+    )
+end
+
+function api.set_sticker_position_in_set(sticker, position) -- https://core.telegram.org/bots/api#setstickerpositioninset
+    return api.request(
+        'https://api.telegram.org/bot' .. api.token .. '/setStickerPositionInSet',
+        {
+            ['sticker'] = sticker,
+            ['position'] = position
+        }
+    )
+end
+
+function api.delete_sticker_from_set(sticker) -- https://core.telegram.org/bots/api#deletestickerfromset
+    return api.request(
+        'https://api.telegram.org/bot' .. api.token .. '/deleteStickerFromSet',
+        {
+            ['sticker'] = sticker
         }
     )
 end
@@ -794,14 +859,10 @@ function api.answer_inline_query(inline_query_id, results, cache_time, is_person
         {
             ['inline_query_id'] = inline_query_id,
             ['results'] = results,
-            ['switch_pm_text'] = switch_pm_text
-            or 'More Features',
-            ['switch_pm_parameter'] = switch_pm_parameter
-            or 'help',
-            ['cache_time'] = cache_time
-            or 0,
-            ['is_personal'] = is_personal
-            or false,
+            ['switch_pm_text'] = switch_pm_text,
+            ['switch_pm_parameter'] = switch_pm_parameter,
+            ['cache_time'] = cache_time,
+            ['is_personal'] = is_personal,
             ['next_offset'] = next_offset
         }
     )
@@ -816,10 +877,9 @@ function api.send_game(chat_id, game_short_name, disable_notification, reply_to_
         {
             ['chat_id'] = chat_id,
             ['game_short_name'] = game_short_name,
-            ['disable_notification'] = disable_notification
-            or false,
+            ['disable_notification'] = disable_notification,
             ['reply_to_message_id'] = reply_to_message_id,
-            ['reply_markup'] = reply_markup or nil
+            ['reply_markup'] = reply_markup
         }
     )
 end
@@ -830,10 +890,8 @@ function api.set_game_score(chat_id, user_id, message_id, score, force, disable_
         {
             ['user_id'] = user_id,
             ['score'] = score,
-            ['force'] = force
-            or false,
-            ['disable_edit_message'] = disable_edit_message
-            or false,
+            ['force'] = force,
+            ['disable_edit_message'] = disable_edit_message,
             ['chat_id'] = chat_id,
             ['message_id'] = message_id,
             ['inline_message_id'] = inline_message_id
@@ -1057,6 +1115,33 @@ function api.input_contact_message_content(phone_number, first_name, last_name, 
     and json.encode(input_message_content)
     or input_message_content
     return input_message_content
+end
+
+-- Functions and meta-methods for handling mask positioning arrays to use with various
+-- sticker-related functions.
+
+api.mask_position_meta = {}
+api.mask_position_meta.__index = api.mask_position_meta
+
+function api.mask_position_meta:position(point, x_shift, y_shift, scale)
+    table.insert(
+        self,
+        {
+            ['point'] = tostring(point), -- Available points include "forehead", "eyes", "mouth" or "chin".
+            ['x_shift'] = tonumber(x_shift),
+            ['y_shift'] = tonumber(y_shift),
+            ['scale'] = tonumber(scale)
+        }
+    )
+    return self
+end
+
+function api.mask_position()
+    local output = setmetatable(
+        {},
+        api.mask_position_meta
+    )
+    return output
 end
 
 -- Functions for handling inline objects to use with api.answer_inline_query().
