@@ -4,13 +4,14 @@ A feature-filled Telegram bot API library written in Lua, created by [Matt](http
 
 This library was written to complement the "[mattata](https://github.com/wrxck/mattata)" project, allowing anybody to create their own Telegram bot with little coding knowledge needed (that is, except a basic knowledge of Lua and the inspiration provided by [@mattatabot](https://t.me/mattatabot) and this library).
 
-| Contents                                            |
-|-----------------------------------------------------|
-| [Installation](#installation)                       |
-| [Update Handling](#update-handling)                 |
-| [API Methods](#api-methods)                         |
-| [Building Inline Results](#building-inline-results) |
-| [Building Reply Markup](#building-reply-markup)     |
+| Contents                                                              |
+|-----------------------------------------------------------------------|
+| [Installation](#installation)                                         |
+| [Update Handling](#update-handling)                                   |
+| [API Methods](#api-methods)                                           |
+| [Building Inline Results](#building-inline-results)                   |
+| [Building Reply Markup](#building-reply-markup)                       |
+| [Building Mask Positioning Arrays](#building-mask-positioning-arrays) |
 
 ## Installation
 
@@ -205,6 +206,7 @@ This is what will run your bot!
 | Contents                                          |
 |---------------------------------------------------|
 | [getMe](#getme)                                   |
+| [getUpdates](#getupdates)                         |
 | [sendMessage](#sendmessage)                       |
 | [forwardMessage](#forwardmessage)                 |
 | [sendPhoto](#sendphoto)                           |
@@ -221,6 +223,9 @@ This is what will run your bot!
 | [getFile](#getfile)                               |
 | [kickChatMember](#kickchatmember)                 |
 | [unbanChatMember](#unbanchatmember)               |
+| [restrictChatMember](#restrictchatmember)         |
+| [promoteChatMember](#promotechatmember)           |
+| [exportChatInviteLink](#exportchatinvitelink)     |
 | [leaveChat](#leavechat)                           |
 | [getChat](#getchat)                               |
 | [getChatAdministrators](#getchatadministrators)   |
@@ -244,6 +249,26 @@ A simple function for testing your bot's auth token, using Telegram's `getMe` me
 ```Lua
 api.get_me()
 ```
+
+#### getUpdates
+
+Use this function to receive incoming updates via long polling, using Telegram's `getUpdates` method.
+
+```Lua
+api.get_updates(
+    offset,
+    limit,
+    timeout,
+    allowed_updates
+)
+```
+
+| Parameters       | Type            | Required | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+|------------------|-----------------|----------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| offset           | Integer         | Optional | Identifier of the first update to be returned. Must be greater by one than the highest among the identifiers of previously received updates. By default, updates starting with the earliest unconfirmed update are returned. An update is considered confirmed as soon as getUpdates is called with an offset higher than its update\_id. The negative offset can be specified to retrieve updates starting from -offset update from the end of the updates queue. All previous updates will forgotten. |
+| limit            | Integer         | Optional | Limits the number of updates to be retrieved. Values between 1—100 are accepted. Defaults to 100.                                                                                                                                                                                                                                                                                                                                                                                                       |
+| timeout          | Integer         | Optional | Timeout in seconds for long polling. Defaults to 0, i.e. usual short polling. Should be positive, short polling should be used for testing purposes only.                                                                                                                                                                                                                                                                                                                                               |
+| allowed\_updates | Array of String | Optional | List the types of updates you want your bot to receive. For example, specify [“message”, “edited\_channel\_post”, “callback\_query”] to only receive updates of these types. Specify an empty list to receive all updates regardless of type (default). If not specified the previous setting will be used. Please note that this parameter doesn't affect updates created before the call to the getUpdates, so unwanted updates may be received for a short period of time.                           |
 
 #### sendMessage
 
@@ -615,6 +640,76 @@ api.unban_chat_member(
 |---------------|-------------------|------------|-----------------------------------------------------------------------------------------------------------------|
 | chat\_id      | Integer or String | Yes        | Unique identifier for the target group or username of the target supergroup (in the format @supergroupusername) |
 | user\_id      | Integer           | Yes        | Unique identifier of the target user                                                                            |
+
+#### restrictChatMember
+
+Use this function to restrict a user in a supergroup, using Telegram's `restrictChatMember` method. The bot must be an administrator in the supergroup for this to work and must have the appropriate admin rights. Pass True for all boolean parameters to lift restrictions from a user.
+
+```Lua
+api.restrict_chat_member(
+    chat_id,
+    user_id,
+    until_date,
+    can_send_messages,
+    can_send_media_messages,
+    can_send_other_messages,
+    can_add_web_page_previews
+)
+```
+
+| Parameters                     | Type              | Required | Description                                                                                                                                                                                             |
+|--------------------------------|-------------------|----------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| chat\_id                       | Integer or String | Yes      | Unique identifier for the target chat or username of the target supergroup (in the format @supergroupusername)                                                                                          |
+| user\_id                       | Integer           | Yes      | Unique identifier of the target user                                                                                                                                                                    |
+| until\_date                    | Integer           | No       | Date when restrictions will be lifted for the user, unix time. If user is restricted for more than 366 days or less than 30 seconds from the current time, they are considered to be restricted forever |
+| can\_send\_messages            | Boolean           | No       | Pass True, if the user can send text messages, contacts, locations and venues                                                                                                                           |
+| can\_send\_media\_messages     | Boolean           | No       | Pass True, if the user can send audios, documents, photos, videos, video notes and voice notes, implies can\_send\_messages                                                                             |
+| can\_send\_other\_messages     | Boolean           | No       | Pass True, if the user can send animations, games, stickers and use inline bots, implies can\_send\_media\_messages                                                                                     |
+| can\_send\_web\_page\_previews | Boolean           | No       | Pass True, if the user may add web page previews to their messages, implies can\_send\_media\_messages                                                                                                  |
+
+#### promoteChatMember
+
+Use this function to promote or demote a user in a supergroup or a channel, using Telegram's `promoteChatMember` method. The bot must be an administrator in the chat for this to work and must have the appropriate admin rights. Pass False for all boolean parameters to demote a user.
+
+```Lua
+api.promote_chat_member(
+    chat_id,
+    user_id,
+    can_change_info,
+    can_post_messages,
+    can_edit_messages,
+    can_delete_messages,
+    can_invite_users,
+    can_restrict_members,
+    can_pin_messages,
+    can_promote_members
+)
+```
+
+| Parameters             | Type              | Required | Description                                                                                                                                                               |
+|------------------------|-------------------|----------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| chat\_id               | Integer or String | Yes      | Unique identifier for the target chat or username of the target channel (in the format @channelusername)                                                                  |
+| user\_id               | Integer           | Yes      | Unique identifier of the target user                                                                                                                                      |
+| can\_change\_info      | Boolean           | No       | Pass True, if the administrator can change chat title, photo and other settings                                                                                           |
+| can\_post\_messages    | Boolean           | No       | Pass True, if the administrator can create channel posts, channels only                                                                                                   |
+| can\_edit\_messages    | Boolean           | No       | Pass True, if the administrator can edit messages of other users, channels only                                                                                           |
+| can\_delete\_messages  | Boolean           | No       | Pass True, if the administrator can delete messages of other users                                                                                                        |
+| can\_invite\_users     | Boolean           | No       | Pass True, if the administrator can invite new users to the chat                                                                                                          |
+| can\_restrict\_members | Boolean           | No       | Pass True, if the administrator can restrict, ban or unban chat members                                                                                                   |
+| can\_pin\_messages     | Boolean           | No       | Pass True, if the administrator can pin messages, supergroups only                                                                                                        |
+| can\_promote\_members  | Boolean           | No       | Pass True, if the administrator can add new administrators with a subset of their own privileges or demote administrators that they have promoted, directly or indirectly |
+
+#### exportChatInviteLink
+
+Use this function to export an invite link to a supergroup or a channel, using Telegram's `exportChatInviteLink` method. The bot must be an administrator in the chat for this to work and must have the appropriate admin rights.
+
+```Lua
+api.export_chat_invite_link(chat_id)
+```
+
+| Parameters    | Type              | Required   | Description                                                                                                            |
+|---------------|-------------------|------------|------------------------------------------------------------------------------------------------------------------------|
+| chat\_id      | Integer or String | Yes        | Unique identifier for the target chat or username of the target supergroup or channel (in the format @channelusername) |
 
 #### leaveChat
 
@@ -1125,3 +1220,24 @@ api.inline_keyboard():row(
     )
 )
 ```
+
+## Building Mask Positioning Arrays
+
+There are functions to build mask positioning arrays in this API. These are used to specify the position of various facial elements using sticker-related Telegram bot API methods. To build a mask positioning array, use the following function:
+
+```Lua
+api.mask_position()
+```
+
+For each position, you need to use the `position()` method on the above function, like this:
+
+```Lua
+api.mask_position():position(
+    point,
+    x_shift,
+    y_shift,
+    scale
+)
+```
+
+Each position method requires 4 parameters.
