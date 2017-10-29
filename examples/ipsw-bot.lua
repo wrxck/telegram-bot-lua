@@ -94,15 +94,21 @@ function ipsw.get_model_keyboard(device)
                 keyboard.inline_keyboard[row],
                 {
                     ['text'] = v.name,
-                    ['callback_data'] = 'model:' .. k
+                    ['callback_data'] = 'model:' .. device .. ':' .. k
                 }
             )
         end
     end
+    table.insert(keyboard.inline_keyboard, {
+        {
+            ['text'] = tools.symbols.back .. ' Back',
+            ['callback_data'] = 'back'
+        }
+    })
     return keyboard
 end
 
-function ipsw.get_firmware_keyboard(model)
+function ipsw.get_firmware_keyboard(device, model)
     local keyboard = {
         ['inline_keyboard'] = {
             {}
@@ -131,19 +137,52 @@ function ipsw.get_firmware_keyboard(model)
             keyboard.inline_keyboard[row],
             {
                 ['text'] = v.version,
-                ['callback_data'] = 'firmware:' .. model .. ' ' .. v.buildid
+                ['callback_data'] = 'firmware:' .. device .. ':' .. model .. ':' .. v.buildid
             }
         )
     end
+    table.insert(keyboard.inline_keyboard, {
+        {
+            ['text'] = tools.symbols.back .. ' Back',
+            ['callback_data'] = 'back:device:' .. device
+        }
+    })
     return keyboard
 end
 
 function api.on_callback_query(callback_query)
     ipsw.init()
     local message = callback_query.message
-    print(callback_query.data)
-    if callback_query.data:match('^device%:') then
-        callback_query.data = callback_query.data:match('^device%:(.-)$')
+    if callback_query.data == 'back' then
+        return api.edit_message_text(
+            message.chat.id,
+            message.message_id,
+            'This tool was created by @wrxck, and makes use of the IPSW.me API.\nBefore we begin, please select your device type:',
+            nil,
+            true,
+            api.inline_keyboard():row(
+                api.row():callback_data_button(
+                    'iPod Touch',
+                    'device:iPod'
+                ):callback_data_button(
+                    'iPhone',
+                    'device:iPhone'
+                )
+            ):row(
+                api.row():callback_data_button(
+                    'iPad',
+                    'device:iPad'
+                ):callback_data_button(
+                    'Apple TV',
+                    'device:Apple TV'
+                )
+            )
+        )
+    elseif callback_query.data:match('^back:') then
+        callback_query.data = callback_query.data:match('^back:(.-)$')
+    end
+    if callback_query.data:match('^device:.-$') then
+        callback_query.data = callback_query.data:match('^device:(.-)$')
         return api.edit_message_text(
             message.chat.id,
             message.message_id,
@@ -152,20 +191,20 @@ function api.on_callback_query(callback_query)
             true,
             ipsw.get_model_keyboard(callback_query.data)
         )
-    elseif callback_query.data:match('^model%:') then
-        callback_query.data = callback_query.data:match('^model%:(.-)$')
+    elseif callback_query.data:match('^model:.-:.-$') then
+        local device, model = callback_query.data:match('^model:(.-):(.-)$')
         return api.edit_message_text(
             message.chat.id,
             message.message_id,
             'Please select your firmware version:',
             nil,
             true,
-            ipsw.get_firmware_keyboard(callback_query.data)
+            ipsw.get_firmware_keyboard(device, model)
         )
-    elseif callback_query.data:match('^firmware%:') then
-        local jdat = ipsw.get_info(
-            callback_query.data:match('^firmware%:(.-)$')
-        )
+    elseif callback_query.data:match('^firmware:.-:.-:.-$') then
+        local device, model, firmware = callback_query.data:match('^firmware:(.-):(.-):(.-)$')
+        firmware = model .. ' ' .. firmware
+        local jdat = ipsw.get_info(firmware)
         return api.edit_message_text(
             message.chat.id,
             message.message_id,
@@ -177,10 +216,7 @@ function api.on_callback_query(callback_query)
                 jdat[1].uploaddate:match('T(.-)Z$'),
                 jdat[1].md5sum,
                 jdat[1].sha1sum,
-                tools.round(
-                    jdat[1].size / 1000000000,
-                    2
-                ),
+                tools.round(jdat[1].size / 1000000000, 2),
                 jdat[1].signed == false and utf8.char(10060) or utf8.char(9989),
                 jdat[1].signed == false and 'no longer' or 'still'
             ),
@@ -190,6 +226,11 @@ function api.on_callback_query(callback_query)
                 api.row():url_button(
                     jdat[1].filename,
                     jdat[1].url
+                )
+            ):row(
+                api.row():callback_data_button(
+                    tools.symbols.back .. ' Back',
+                    'back:model:' .. device .. ':' .. model
                 )
             )
         )
