@@ -9,7 +9,7 @@
                        __/ |
                       |___/
 
-      Version 1.6-0
+      Version 1.7-0
       Copyright (c) 2017 Matthew Hesketh
       See LICENSE for details
 
@@ -854,10 +854,16 @@ end
 
 function api.on_update(update) end
 function api.on_message(message) end
+function api.on_private_message(message) end
+function api.on_group_message(message) end
+function api.on_supergroup_message(message) end
 function api.on_callback_query(callback_query) end
 function api.on_inline_query(inline_query) end
 function api.on_channel_post(channel_post) end
 function api.on_edited_message(edited_message) end
+function api.on_edited_private_message(edited_message) end
+function api.on_edited_group_message(edited_message) end
+function api.on_edited_supergroup_message(edited_message) end
 function api.on_edited_channel_post(edited_channel_post) end
 function api.on_chosen_inline_result(chosen_inline_result) end
 function api.on_shipping_query(shipping_query) end
@@ -868,8 +874,22 @@ function api.process_update(update)
         api.on_update(update)
     end
     if update.message then
+        if update.message.chat.type == 'private' then
+            api.on_private_message(update.message)
+        elseif update.message.chat.type == 'group' then
+            api.on_group_message(update.message)
+        elseif update.message.chat.type == 'supergroup' then
+            api.on_supergroup_message(update.message)
+        end
         return api.on_message(update.message)
     elseif update.edited_message then
+        if update.edited_message.chat.type == 'private' then
+            api.on_edited_private_message(update.edited_message)
+        elseif update.edited_message.chat.type == 'group' then
+            api.on_edited_group_message(update.edited_message)
+        elseif update.edited_message.chat.type == 'supergroup' then
+            api.on_edited_supergroup_message(update.edited_message)
+        end
         return api.on_edited_message(update.edited_message)
     elseif update.callback_query then
         return api.on_callback_query(update.callback_query)
