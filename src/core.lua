@@ -9,7 +9,7 @@
                        __/ |
                       |___/
 
-      Version 1.7-0
+      Version 1.8-0
       Copyright (c) 2017 Matthew Hesketh
       See LICENSE for details
 
@@ -272,6 +272,18 @@ function api.send_video_note(chat_id, video_note, duration, length, disable_noti
             ['reply_markup'] = reply_markup
         },
         { ['video_note'] = video_note }
+    )
+end
+
+function api.send_media_group(chat_id, media, disable_notification, reply_to_message_id) -- https://core.telegram.org/bots/api#sendmediagroup
+    return api.request(
+        'https://api.telegram.org/bot' .. api.token .. '/sendMediaGroup',
+        {
+            ['chat_id'] = chat_id,
+            ['media'] = media,
+            ['disable_notification'] = disable_notification,
+            ['reply_to_message_id'] = reply_to_message_id
+        }
     )
 end
 
@@ -801,7 +813,7 @@ function api.get_chat(chat_id) -- https://core.telegram.org/bots/api#getchat
     )
 end
 
-function api.send_invoice(chat_id, title, description, payload, provider_token, start_parameter, currency, prices, photo_url, photo_size, photo_width, photo_height, need_name, need_phone_number, need_email, need_shipping_address, is_flexible, disable_notification, reply_to_message_id, reply_markup)
+function api.send_invoice(chat_id, title, description, payload, provider_token, start_parameter, currency, prices, provider_data, photo_url, photo_size, photo_width, photo_height, need_name, need_phone_number, need_email, need_shipping_address, is_flexible, disable_notification, reply_to_message_id, reply_markup)
     return api.request(
         'https://api.telegram.org/bot' .. api.token .. '/sendInvoice',
         {
@@ -813,6 +825,7 @@ function api.send_invoice(chat_id, title, description, payload, provider_token, 
             ['start_parameter'] = start_parameter,
             ['currency'] = currency,
             ['prices'] = prices,
+            ['provider_data'] = provider_data,
             ['photo_url'] = photo_url,
             ['photo_size'] = photo_size,
             ['photo_width'] = photo_width,
@@ -1504,6 +1517,40 @@ end
 
 function api.row(buttons)
     return setmetatable({}, api.row_meta)
+end
+
+api.input_media_meta = {}
+api.input_media_meta.__index = api.input_media_meta
+
+function api.input_media_meta:photo(media, caption)
+    table.insert(
+        self,
+        {
+            ['type'] = 'photo',
+            ['media'] = tostring(media),
+            ['caption'] = caption
+        }
+    )
+    return self
+end
+
+function api.input_media_meta:video(media, caption, width, height, duration)
+    table.insert(
+        self,
+        {
+            ['type'] = 'video',
+            ['media'] = tostring(media),
+            ['caption'] = caption,
+            ['width'] = width,
+            ['height'] = height,
+            ['duration'] = duration
+        }
+    )
+    return self
+end
+
+function api.input_media(input_media)
+    return setmetatable({}, api.input_media_meta)
 end
 
 function api.labeled_price(label, amount, encoded)
