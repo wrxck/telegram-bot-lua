@@ -35,7 +35,7 @@ function api.configure(token, debug)
     return api
 end
 
-function api.request(endpoint, parameters, file)
+function api.request(endpoint, parameters, files)
     assert(endpoint, 'You must specify an endpoint to make this request to!')
     parameters = parameters or {}
     for k, v in pairs(parameters) do
@@ -45,17 +45,18 @@ function api.request(endpoint, parameters, file)
         local output = json.encode(parameters, { ['indent'] = true })
         print(output)
     end
-    if file and next(file) ~= nil then
-        local file_type, file_name = next(file)
-        local file_res = io.open(file_name, 'r')
-        if file_res then
-            parameters[file_type] = {
-                filename = file_name,
-                data = file_res:read('*a')
-            }
-            file_res:close()
-        else
-            parameters[file_type] = file_name
+    if files and type(files) == 'table' then
+        for file_type, file_name in pairs(files) do
+            local file_res = io.open(file_name, 'r')
+            if file_res then
+                parameters[file_type] = {
+                    filename = file_name,
+                    data = file_res:read('*a')
+                }
+                file_res:close()
+            else
+                parameters[file_type] = file_name
+            end
         end
     end
     parameters = next(parameters) == nil and { '' } or parameters
@@ -276,14 +277,29 @@ function api.send_video_note(chat_id, video_note, duration, length, disable_noti
 end
 
 function api.send_media_group(chat_id, media, disable_notification, reply_to_message_id) -- https://core.telegram.org/bots/api#sendmediagroup
+    local array_media = {}
+    local files_media = {}
+    for i, input_media in ipairs(media) do
+        local attach_name = input_media:gsub('.*%/(.+)', '%1'):gsub('.*\\(.+)', '%1'):gsub('(.+)(%..*)', '%1-n' .. tostring(i) .. '%2')
+        table.insert(array_media, {
+            ['type'] = input_media.type,
+            ['media'] = string.format('attach://%s', attach_name),
+            ['caption'] = input_media.caption,
+            ['width'] = input_media.width,
+            ['height'] = input_media.height,
+            ['duration'] = input_media.duration
+        })
+        files_media[attach_name] = input_media.media
+    end
     return api.request(
         'https://api.telegram.org/bot' .. api.token .. '/sendMediaGroup',
         {
             ['chat_id'] = chat_id,
-            ['media'] = media,
+            ['media'] = array_media,
             ['disable_notification'] = disable_notification,
             ['reply_to_message_id'] = reply_to_message_id
-        }
+        },
+        files_media
     )
 end
 
