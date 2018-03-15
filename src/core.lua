@@ -291,9 +291,11 @@ function api.send_media_group(chat_id, media, disable_notification, reply_to_mes
             ['type'] = input_media.type,
             ['media'] = string.format('attach://%s', attach_name),
             ['caption'] = input_media.caption,
+            ['parse_mode'] = input_media.parse_mode,
             ['width'] = input_media.width,
             ['height'] = input_media.height,
-            ['duration'] = input_media.duration
+            ['duration'] = input_media.duration,
+            ['supports_streaming'] = input_media.supports_streaming
         })
         files_media[attach_name] = input_media.media
     end
