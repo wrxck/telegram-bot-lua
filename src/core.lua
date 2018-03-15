@@ -162,13 +162,14 @@ function api.forward_message(chat_id, from_chat_id, disable_notification, messag
     )
 end
 
-function api.send_photo(chat_id, photo, caption, disable_notification, reply_to_message_id, reply_markup) -- https://core.telegram.org/bots/api#sendphoto
+function api.send_photo(chat_id, photo, caption, parse_mode, disable_notification, reply_to_message_id, reply_markup) -- https://core.telegram.org/bots/api#sendphoto
     reply_markup = type(reply_markup) == 'table' and json.encode(reply_markup) or reply_markup
     return api.request(
         'https://api.telegram.org/bot' .. api.token .. '/sendPhoto',
         {
             ['chat_id'] = chat_id,
             ['caption'] = caption,
+            ['parse_mode'] = parse_mode,
             ['disable_notification'] = disable_notification,
             ['reply_to_message_id'] = reply_to_message_id,
             ['reply_markup'] = reply_markup
@@ -179,13 +180,14 @@ function api.send_photo(chat_id, photo, caption, disable_notification, reply_to_
     )
 end
 
-function api.send_audio(chat_id, audio, caption, duration, performer, title, disable_notification, reply_to_message_id, reply_markup) -- https://core.telegram.org/bots/api#sendaudio
+function api.send_audio(chat_id, audio, caption, parse_mode, duration, performer, title, disable_notification, reply_to_message_id, reply_markup) -- https://core.telegram.org/bots/api#sendaudio
     reply_markup = type(reply_markup) == 'table' and json.encode(reply_markup) or reply_markup
     return api.request(
         'https://api.telegram.org/bot' .. api.token .. '/sendAudio',
         {
             ['chat_id'] = chat_id,
             ['caption'] = caption,
+            ['parse_mode'] = parse_mode,
             ['duration'] = duration,
             ['performer'] = performer,
             ['title'] = title,
@@ -197,13 +199,14 @@ function api.send_audio(chat_id, audio, caption, duration, performer, title, dis
     )
 end
 
-function api.send_document(chat_id, document, caption, disable_notification, reply_to_message_id, reply_markup) -- https://core.telegram.org/bots/api#senddocument
+function api.send_document(chat_id, document, caption, parse_mode, disable_notification, reply_to_message_id, reply_markup) -- https://core.telegram.org/bots/api#senddocument
     reply_markup = type(reply_markup) == 'table' and json.encode(reply_markup) or reply_markup
     return api.request(
         'https://api.telegram.org/bot' .. api.token .. '/sendDocument',
         {
             ['chat_id'] = chat_id,
             ['caption'] = caption,
+            ['parse_mode'] = parse_mode,
             ['disable_notification'] = disable_notification,
             ['reply_to_message_id'] = reply_to_message_id,
             ['reply_markup'] = reply_markup
@@ -226,7 +229,7 @@ function api.send_sticker(chat_id, sticker, disable_notification, reply_to_messa
     )
 end
 
-function api.send_video(chat_id, video, duration, width, height, caption, disable_notification, reply_to_message_id, reply_markup) -- https://core.telegram.org/bots/api#sendvideo
+function api.send_video(chat_id, video, duration, width, height, caption, parse_mode, supports_streaming, disable_notification, reply_to_message_id, reply_markup) -- https://core.telegram.org/bots/api#sendvideo
     reply_markup = type(reply_markup) == 'table' and json.encode(reply_markup) or reply_markup
     return api.request(
         'https://api.telegram.org/bot' .. api.token .. '/sendVideo',
@@ -236,6 +239,8 @@ function api.send_video(chat_id, video, duration, width, height, caption, disabl
             ['width'] = width,
             ['height'] = height,
             ['caption'] = caption,
+            ['parse_mode'] = parse_mode,
+            ['supports_streaming'] = supports_streaming,
             ['disable_notification'] = disable_notification,
             ['reply_to_message_id'] = reply_to_message_id,
             ['reply_markup'] = reply_markup
@@ -244,13 +249,14 @@ function api.send_video(chat_id, video, duration, width, height, caption, disabl
     )
 end
 
-function api.send_voice(chat_id, voice, caption, duration, disable_notification, reply_to_message_id, reply_markup) -- https://core.telegram.org/bots/api#sendvoice
+function api.send_voice(chat_id, voice, caption, parse_mode, duration, disable_notification, reply_to_message_id, reply_markup) -- https://core.telegram.org/bots/api#sendvoice
     reply_markup = type(reply_markup) == 'table' and json.encode(reply_markup) or reply_markup
     return api.request(
         'https://api.telegram.org/bot' .. api.token .. '/sendVoice',
         {
             ['chat_id'] = chat_id,
             ['caption'] = caption,
+            ['parse_mode'] = parse_mode,
             ['duration'] = duration,
             ['disable_notification'] = disable_notification,
             ['reply_to_message_id'] = reply_to_message_id,
@@ -636,7 +642,7 @@ function api.edit_message_text(chat_id, message_id, text, parse_mode, disable_we
     return success
 end
 
-function api.edit_message_caption(chat_id, message_id, caption, reply_markup, inline_message_id) -- https://core.telegram.org/bots/api#editmessagecaption
+function api.edit_message_caption(chat_id, message_id, caption, parse_mode, reply_markup, inline_message_id) -- https://core.telegram.org/bots/api#editmessagecaption
     reply_markup = type(reply_markup) == 'table' and json.encode(reply_markup) or reply_markup
     local success = api.request(
         'https://api.telegram.org/bot' .. api.token .. '/editMessageCaption',
@@ -645,6 +651,7 @@ function api.edit_message_caption(chat_id, message_id, caption, reply_markup, in
             ['message_id'] = message_id,
             ['inline_message_id'] = inline_message_id,
             ['caption'] = caption,
+            ['parse_mode'] = parse_mode,
             ['reply_markup'] = reply_markup
         }
     )
@@ -1143,6 +1150,11 @@ function api.inline_result_meta:caption(caption)
     return self
 end
 
+function api.inline_result_meta:parse_mode(parse_mode)
+    self['parse_mode'] = tostring(parse_mode)
+    return self
+end
+
 function api.inline_result_meta:gif_url(gif_url)
     self['gif_url'] = tostring(gif_url)
     return self
@@ -1538,25 +1550,27 @@ end
 api.input_media_meta = {}
 api.input_media_meta.__index = api.input_media_meta
 
-function api.input_media_meta:photo(media, caption)
+function api.input_media_meta:photo(media, caption, parse_mode)
     table.insert(
         self,
         {
             ['type'] = 'photo',
             ['media'] = tostring(media),
-            ['caption'] = caption
+            ['caption'] = caption,
+            ['parse_mode'] = parse_mode
         }
     )
     return self
 end
 
-function api.input_media_meta:video(media, caption, width, height, duration)
+function api.input_media_meta:video(media, caption, parse_mode, width, height, duration)
     table.insert(
         self,
         {
             ['type'] = 'video',
             ['media'] = tostring(media),
             ['caption'] = caption,
+            ['parse_mode'] = parse_mode,
             ['width'] = width,
             ['height'] = height,
             ['duration'] = duration
