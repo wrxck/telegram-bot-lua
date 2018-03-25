@@ -39,7 +39,11 @@ function api.request(endpoint, parameters, files)
     assert(endpoint, 'You must specify an endpoint to make this request to!')
     parameters = parameters or {}
     for k, v in pairs(parameters) do
-        parameters[k] = tostring(v)
+        if type(v) == 'table' then
+            parameters[k] = json.encode(v)
+        else
+            parameters[k] = tostring(v)
+        end
     end
     if api.debug then
         local output = json.encode(parameters, { ['indent'] = true })
@@ -286,7 +290,7 @@ function api.send_media_group(chat_id, media, disable_notification, reply_to_mes
     local array_media = {}
     local files_media = {}
     for i, input_media in ipairs(media) do
-        local attach_name = input_media:gsub('.*%/(.+)', '%1'):gsub('.*\\(.+)', '%1'):gsub('(.+)(%..*)', '%1-n' .. tostring(i) .. '%2')
+        local attach_name = input_media.media:gsub('.*%/(.+)', '%1'):gsub('.*\\(.+)', '%1')
         table.insert(array_media, {
             ['type'] = input_media.type,
             ['media'] = string.format('attach://%s', attach_name),
