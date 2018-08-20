@@ -9,7 +9,7 @@
                        __/ |
                       |___/
 
-      Version 1.8-0
+      Version 1.9-0
       Copyright (c) 2017 Matthew Hesketh
       See LICENSE for details
 
@@ -225,7 +225,7 @@ function api.send_sticker(chat_id, sticker, disable_notification, reply_to_messa
     )
 end
 
-function api.send_video(chat_id, video, duration, width, height, caption, disable_notification, reply_to_message_id, reply_markup) -- https://core.telegram.org/bots/api#sendvideo
+function api.send_video(chat_id, video, duration, width, height, caption, supports_streaming, disable_notification, reply_to_message_id, reply_markup) -- https://core.telegram.org/bots/api#sendvideo
     reply_markup = type(reply_markup) == 'table' and json.encode(reply_markup) or reply_markup
     return api.request(
         'https://api.telegram.org/bot' .. api.token .. '/sendVideo',
@@ -235,11 +235,33 @@ function api.send_video(chat_id, video, duration, width, height, caption, disabl
             ['width'] = width,
             ['height'] = height,
             ['caption'] = caption,
+            ['supports_streaming'] = supports_streaming,
             ['disable_notification'] = disable_notification,
             ['reply_to_message_id'] = reply_to_message_id,
             ['reply_markup'] = reply_markup
         },
         { ['video'] = video }
+    )
+end
+
+function api.send_animation(chat_id, animation, duration, width, height, thumb, caption, parse_mode, disable_notification, reply_to_message_id, reply_markup) -- https://core.telegram.org/bots/api#sendanimation
+    reply_markup = type(reply_markup) == 'table' and json.encode(reply_markup) or reply_markup
+    return api.request(
+        'https://api.telegram.org/bot' .. api.token .. '/sendAnimation',
+        {
+            ['chat_id'] = chat_id,
+            ['duration'] = duration,
+            ['width'] = width,
+            ['height'] = height,
+            ['caption'] = caption,
+            ['parse_mode'] = parse_mode,
+            ['disable_notification'] = disable_notification,
+            ['reply_to_message_id'] = reply_to_message_id,
+            ['reply_markup'] = reply_markup
+        }, {
+            ['animation'] = animation,
+            ['thumb'] = thumb
+        }
     )
 end
 
@@ -331,7 +353,7 @@ function api.stop_message_live_location(chat_id, message_id, inline_message_id, 
     )
 end
 
-function api.send_venue(chat_id, latitude, longitude, title, address, foursquare_id, disable_notification, reply_to_message_id, reply_markup) -- https://core.telegram.org/bots/api#sendvenue
+function api.send_venue(chat_id, latitude, longitude, title, address, foursquare_id, foursquare_type, disable_notification, reply_to_message_id, reply_markup) -- https://core.telegram.org/bots/api#sendvenue
     reply_markup = type(reply_markup) == 'table' and json.encode(reply_markup) or reply_markup
     return api.request(
         'https://api.telegram.org/bot' .. api.token .. '/sendVenue',
@@ -342,6 +364,7 @@ function api.send_venue(chat_id, latitude, longitude, title, address, foursquare
             ['title'] = title,
             ['address'] = address,
             ['foursquare_id'] = foursquare_id,
+            ['foursquare_type'] = foursquare_type,
             ['disable_notification'] = disable_notification,
             ['reply_to_message_id'] = reply_to_message_id,
             ['reply_markup'] = reply_markup
@@ -640,6 +663,33 @@ function api.edit_message_caption(chat_id, message_id, caption, reply_markup, in
                 ['message_id'] = inline_message_id,
                 ['inline_message_id'] = message_id,
                 ['caption'] = caption,
+                ['reply_markup'] = reply_markup
+            }
+        )
+    end
+    return success
+end
+
+function api.edit_message_media(chat_id, message_id, media, reply_markup, inline_message_id) -- https://core.telegram.org/bots/api#editmessagemedia
+    reply_markup = type(reply_markup) == 'table' and json.encode(reply_markup) or reply_markup
+    local success = api.request(
+        'https://api.telegram.org/bot' .. api.token .. '/editMessageMedia',
+        {
+            ['chat_id'] = chat_id,
+            ['message_id'] = message_id,
+            ['inline_message_id'] = inline_message_id,
+            ['media'] = media,
+            ['reply_markup'] = reply_markup
+        }
+    )
+    if not success then
+        return api.request(
+            'https://api.telegram.org/bot' .. api.token .. '/editMessageMedia',
+            {
+                ['chat_id'] = chat_id,
+                ['message_id'] = inline_message_id,
+                ['inline_message_id'] = message_id,
+                ['media'] = media,
                 ['reply_markup'] = reply_markup
             }
         )
@@ -978,6 +1028,68 @@ function api.input_contact_message_content(phone_number, first_name, last_name, 
     }
     input_message_content = encoded and json.encode(input_message_content) or input_message_content
     return input_message_content
+end
+
+function api.input_media_photo(media, caption, parse_mode)
+    return {
+        ['type'] = 'photo',
+        ['caption'] = caption,
+        ['parse_mode'] = parse_mode
+    }, { ['media'] = media }
+end
+
+function api.input_media_video(media, thumb, caption, parse_mode, width, height, duration, supports_streaming)
+    return {
+        ['type'] = 'video',
+        ['caption'] = caption,
+        ['parse_mode'] = parse_mode,
+        ['width'] = tonumber(width),
+        ['height'] = tonumber(height),
+        ['duration'] = tonumber(duration),
+        ['supports_streaming'] = supports_streaming
+    }, {
+        ['media'] = media,
+        ['thumb'] = thumb
+    }
+end
+
+function api.input_media_animation(media, thumb, caption, parse_mode, width, height, duration)
+    return {
+        ['type'] = 'animation',
+        ['caption'] = caption,
+        ['parse_mode'] = parse_mode,
+        ['width'] = tonumber(width),
+        ['height'] = tonumber(height),
+        ['duration'] = tonumber(duration)
+    }, {
+        ['media'] = media,
+        ['thumb'] = thumb
+    }
+end
+
+function api.input_media_audio(media, thumb, caption, parse_mode, duration, performer, title)
+    return {
+        ['type'] = 'audio',
+        ['caption'] = caption,
+        ['parse_mode'] = parse_mode,
+        ['duration'] = tonumber(duration),
+        ['performer'] = performer,
+        ['title'] = title
+    }, {
+        ['media'] = media,
+        ['thumb'] = thumb
+    }
+end
+
+function api.input_media_document(media, thumb, caption, parse_mode)
+    return {
+        ['type'] = 'document',
+        ['caption'] = caption,
+        ['parse_mode'] = parse_mode
+    }, {
+        ['media'] = media,
+        ['thumb'] = thumb
+    }
 end
 
 -- Functions and meta-methods for handling mask positioning arrays to use with various
