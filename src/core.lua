@@ -20,7 +20,7 @@ local https = require('ssl.https')
 local multipart = require('multipart-post')
 local ltn12 = require('ltn12')
 local json = require('dkjson')
-local config = dofile('config.lua')
+local config = dofile('src/config.lua')
 
 function api.configure(token, debug)
     if not token or type(token) ~= 'string' then
