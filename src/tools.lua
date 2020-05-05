@@ -10,7 +10,7 @@
                       |___/
 
       Version 1.9-0
-      Copyright (c) 2017 Matthew Hesketh
+      Copyright (c) 2020 Matthew Hesketh
       See LICENSE for details
 
 ]]

@@ -34,6 +34,7 @@ dependencies = {
 build = {
     type = "builtin",
     modules = {
+        ["telegram-bot-lua.config"] = "src/config.lua",
         ["telegram-bot-lua.core"] = "src/core.lua",
         ["telegram-bot-lua.tools"] = "src/tools.lua"
     }
