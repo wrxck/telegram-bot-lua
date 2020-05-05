@@ -20,7 +20,7 @@ local https = require('ssl.https')
 local multipart = require('multipart-post')
 local ltn12 = require('ltn12')
 local json = require('dkjson')
-local config = require('config')
+local config = require('telegram-bot-lua.config')
 
 function api.configure(token, debug)
     if not token or type(token) ~= 'string' then
