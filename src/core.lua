@@ -124,7 +124,7 @@ function api.set_webhook(url, certificate, max_connections, allowed_updates) -- 
             ['max_connections'] = max_connections,
             ['allowed_updates'] = allowed_updates
         },
-		{ ['certificate'] = certificate
+		{ ['certificate'] = certificate }
     )
 end
 
