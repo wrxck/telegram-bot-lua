@@ -511,7 +511,10 @@ function api.unban_chat_member(chat_id, user_id) -- https://core.telegram.org/bo
 end
 
 function api.restrict_chat_member(chat_id, user_id, until_date, can_send_messages, can_send_media_messages, can_send_polls, can_send_other_messages, can_add_web_page_previews, can_change_info, can_invite_users, can_pin_messages) -- https://core.telegram.org/bots/api#restrictchatmember
-    local permissions = {
+    if until_date == ('forever' or 'permanently') then
+        until_date = os.time() - 1000 -- indefinite restriction
+    end
+    local permissions = type(can_send_messages) == 'table' and can_send_messages or { -- allows the user to pass the permissions as a table should they want to do so
 	    ['can_send_messages'] = can_send_messages,
 		['can_send_media_messages'] = can_send_media_messages,
 		['can_send_polls'] = can_send_polls,
@@ -565,7 +568,7 @@ function api.set_chat_administrator_custom_title(chat_id, user_id, custom_title)
 end
 
 function api.set_chat_permissions(chat_id, can_send_messages, can_send_media_messages, can_send_polls, can_send_other_messages, can_add_web_page_previews, can_change_info, can_invite_users, can_pin_messages) -- https://core.telegram.org/bots/api#setchatpermissions
-    local permissions = {
+    local permissions = type(can_send_messages) == 'table' and can_send_messages or { -- allows the user to pass the permissions as a table should they want to do so
 	    ['can_send_messages'] = can_send_messages,
 		['can_send_media_messages'] = can_send_media_messages,
 		['can_send_polls'] = can_send_polls,
