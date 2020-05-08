@@ -529,7 +529,7 @@ function api.restrict_chat_member(chat_id, user_id, until_date, can_send_message
         {
             ['chat_id'] = chat_id,
             ['user_id'] = user_id,
-			['permissions'] = permissions,
+			['permissions'] = json.encode(permissions),
             ['until_date'] = until_date
         }
     )
@@ -582,7 +582,7 @@ function api.set_chat_permissions(chat_id, can_send_messages, can_send_media_mes
         config.endpoint .. api.token .. '/setChatPermissions',
         {
             ['chat_id'] = chat_id,
-			['permissions'] = permissions
+			['permissions'] = json.encode(permissions)
         }
     )
 end
