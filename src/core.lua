@@ -671,7 +671,7 @@ function api.get_chat(chat_id) -- https://core.telegram.org/bots/api#getchat
     if not request or not request.result then
         return request
     end
-    if request.result.username and request.result.type == 'user' then
+    if request.result.username and request.result.type == 'private' then
         local scrape, res = https.request('https://t.me/' .. request.result.username)
         if res ~= 200 then
             return request
