@@ -664,10 +664,26 @@ function api.leave_chat(chat_id) -- https://core.telegram.org/bots/api#leavechat
 end
 
 function api.get_chat(chat_id) -- https://core.telegram.org/bots/api#getchat
-    return api.request(
+    local request = api.request(
         config.endpoint .. api.token .. '/getChat',
         { ['chat_id'] = chat_id }
     )
+    if not request or not request.result then
+        return request
+    end
+    if request.result.username and request.result.type == 'user' then
+        local scrape, res = https.request('https://t.me/' .. request.result.username)
+        if res ~= 200 then
+            return request
+        end
+        local bio = scrape:match('%<div class="tgme_page_description "%>(.-)%</div%>')
+        if not bio then
+            return request
+        end
+        bio = bio:gsub('%<br%>', '\n') -- clear some html, we'll add more to this at some point
+        request.result.bio = bio
+    end
+    return request
 end
 
 function api.get_chat_administrators(chat_id) -- https://core.telegram.org/bots/api#getchatadministrators
