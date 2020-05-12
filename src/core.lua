@@ -124,7 +124,7 @@ function api.set_webhook(url, certificate, max_connections, allowed_updates) -- 
             ['max_connections'] = max_connections,
             ['allowed_updates'] = allowed_updates
         },
-		{ ['certificate'] = certificate }
+        { ['certificate'] = certificate }
     )
 end
 
@@ -144,6 +144,9 @@ function api.send_message(message, text, parse_mode, disable_web_page_preview, d
     reply_markup = type(reply_markup) == 'table' and json.encode(reply_markup) or reply_markup
     message = (type(message) == 'table' and message.chat and message.chat.id) and message.chat.id or message
     parse_mode = (type(parse_mode) == 'boolean' and parse_mode == true) and 'markdown' or parse_mode
+    if disable_web_page_preview == nil then
+        disable_web_page_preview = true
+    end
     return api.request(
         config.endpoint .. api.token .. '/sendMessage',
         {
@@ -405,41 +408,41 @@ end
 
 function api.send_poll(chat_id, question, options, is_anonymous, poll_type, allows_multiple_answers, correct_option_id, explanation, explanation_parse_mode, open_period, close_date, is_closed, disable_notification, reply_to_message_id, reply_markup) -- https://core.telegram.org/bots/api#sendpoll
     reply_markup = type(reply_markup) == 'table' and json.encode(reply_markup) or reply_markup
-	is_anonymous = type(is_anonymous) == 'boolean' and is_anonymous or false
-	allows_multiple_answers = type(allows_multiple_answers) == 'boolean' and allows_multiple_answers or false
-	return api.request(
-	    config.endpoint .. api.token .. '/sendPoll',
-		{
-		    ['chat_id'] = chat_id,
-			['question'] = question,
-			['options'] = options,
-			['is_anonymous'] = is_anonymous,
-			['type'] = poll_type,
-			['allows_multiple_answers'] = allows_multiple_answers,
-			['correct_option_id'] = correct_option_id,
-			['explanation'] = explanation,
-			['explanation_parse_mode'] = explanation_parse_mode,
-			['open_period'] = open_period,
-			['close_date'] = close_date,
-			['is_closed'] = is_closed,
-			['disable_notification'] = disable_notification,
-			['reply_to_message_id'] = reply_to_message_id,
-			['reply_markup'] = reply_markup
-		}
-	)
+    is_anonymous = type(is_anonymous) == 'boolean' and is_anonymous or false
+    allows_multiple_answers = type(allows_multiple_answers) == 'boolean' and allows_multiple_answers or false
+    return api.request(
+        config.endpoint .. api.token .. '/sendPoll',
+        {
+            ['chat_id'] = chat_id,
+            ['question'] = question,
+            ['options'] = options,
+            ['is_anonymous'] = is_anonymous,
+            ['type'] = poll_type,
+            ['allows_multiple_answers'] = allows_multiple_answers,
+            ['correct_option_id'] = correct_option_id,
+            ['explanation'] = explanation,
+            ['explanation_parse_mode'] = explanation_parse_mode,
+            ['open_period'] = open_period,
+            ['close_date'] = close_date,
+            ['is_closed'] = is_closed,
+            ['disable_notification'] = disable_notification,
+            ['reply_to_message_id'] = reply_to_message_id,
+            ['reply_markup'] = reply_markup
+        }
+    )
 end
 
 function api.send_dice(chat_id, emoji, disable_notification, reply_to_message_id, reply_markup) -- https://core.telegram.org/bots/api#senddice
     return api.request(
-	    config.endpoint .. api.token .. '/sendDice',
-		{
-		    ['chat_id'] = chat_id,
-			['emoji'] = emoji,
-			['disable_notification'] = disable_notification,
-			['reply_to_message_id'] = reply_to_message_id,
-			['reply_markup'] = reply_markup
-		}
-	)
+        config.endpoint .. api.token .. '/sendDice',
+        {
+            ['chat_id'] = chat_id,
+            ['emoji'] = emoji,
+            ['disable_notification'] = disable_notification,
+            ['reply_to_message_id'] = reply_to_message_id,
+            ['reply_markup'] = reply_markup
+        }
+    )
 end
 
 function api.send_chat_action(chat_id, action) -- https://core.telegram.org/bots/api#sendchataction
@@ -515,21 +518,21 @@ function api.restrict_chat_member(chat_id, user_id, until_date, can_send_message
         until_date = os.time() - 1000 -- indefinite restriction
     end
     local permissions = type(can_send_messages) == 'table' and can_send_messages or { -- allows the user to pass the permissions as a table should they want to do so
-	    ['can_send_messages'] = can_send_messages,
-		['can_send_media_messages'] = can_send_media_messages,
-		['can_send_polls'] = can_send_polls,
-		['can_send_other_messages'] = can_send_other_messages,
-		['can_add_web_page_previews'] = can_add_web_page_previews,
-		['can_change_info'] = can_change_info,
-		['can_invite_users'] = can_invite_users,
-		['can_pin_messages'] = can_pin_messages
-	}
-	return api.request(
+        ['can_send_messages'] = can_send_messages,
+        ['can_send_media_messages'] = can_send_media_messages,
+        ['can_send_polls'] = can_send_polls,
+        ['can_send_other_messages'] = can_send_other_messages,
+        ['can_add_web_page_previews'] = can_add_web_page_previews,
+        ['can_change_info'] = can_change_info,
+        ['can_invite_users'] = can_invite_users,
+        ['can_pin_messages'] = can_pin_messages
+    }
+    return api.request(
         config.endpoint .. api.token .. '/restrictChatMember',
         {
             ['chat_id'] = chat_id,
             ['user_id'] = user_id,
-			['permissions'] = json.encode(permissions),
+            ['permissions'] = json.encode(permissions),
             ['until_date'] = until_date
         }
     )
@@ -555,34 +558,34 @@ end
 
 function api.set_chat_administrator_custom_title(chat_id, user_id, custom_title) -- https://core.telegram.org/bots/api#setchatadministratorcustomtitle
     if custom_title:len() > 16 then -- telegram doesn't allow custom titles longer than 16 chars
-	    custom_title = custom_title:sub(1, 16)
-	end
-	return api.request(
-	    config.endpoint .. api.token .. '/setChatAdministratorCustomTitle',
-		{
-		    ['chat_id'] = chat_id,
-			['user_id'] = user_id,
-			['custom_title'] = custom_title
-		}
-	)
+        custom_title = custom_title:sub(1, 16)
+    end
+    return api.request(
+        config.endpoint .. api.token .. '/setChatAdministratorCustomTitle',
+        {
+            ['chat_id'] = chat_id,
+            ['user_id'] = user_id,
+            ['custom_title'] = custom_title
+        }
+    )
 end
 
 function api.set_chat_permissions(chat_id, can_send_messages, can_send_media_messages, can_send_polls, can_send_other_messages, can_add_web_page_previews, can_change_info, can_invite_users, can_pin_messages) -- https://core.telegram.org/bots/api#setchatpermissions
     local permissions = type(can_send_messages) == 'table' and can_send_messages or { -- allows the user to pass the permissions as a table should they want to do so
-	    ['can_send_messages'] = can_send_messages,
-		['can_send_media_messages'] = can_send_media_messages,
-		['can_send_polls'] = can_send_polls,
-		['can_send_other_messages'] = can_send_other_messages,
-		['can_add_web_page_previews'] = can_add_web_page_previews,
-		['can_change_info'] = can_change_info,
-		['can_invite_users'] = can_invite_users,
-		['can_pin_messages'] = can_pin_messages
-	}
-	return api.request(
+        ['can_send_messages'] = can_send_messages,
+        ['can_send_media_messages'] = can_send_media_messages,
+        ['can_send_polls'] = can_send_polls,
+        ['can_send_other_messages'] = can_send_other_messages,
+        ['can_add_web_page_previews'] = can_add_web_page_previews,
+        ['can_change_info'] = can_change_info,
+        ['can_invite_users'] = can_invite_users,
+        ['can_pin_messages'] = can_pin_messages
+    }
+    return api.request(
         config.endpoint .. api.token .. '/setChatPermissions',
         {
             ['chat_id'] = chat_id,
-			['permissions'] = json.encode(permissions)
+            ['permissions'] = json.encode(permissions)
         }
     )
 end
@@ -611,8 +614,8 @@ end
 
 function api.set_chat_title(chat_id, title) -- https://core.telegram.org/bots/api#setchattitle
     if title:len() > 255 then -- telegram won't allow chat titles greater than 255 chars
-	    title = title:sub(1, 255)
-	end
+        title = title:sub(1, 255)
+    end
     return api.request(
         config.endpoint .. api.token .. '/setChatTitle',
         {
@@ -624,8 +627,8 @@ end
 
 function api.set_chat_description(chat_id, description) -- https://core.telegram.org/bots/api#setchatdescription
     if description:len() > 255 then -- telegram won't allow chat descriptions greater than 255 chars
-	    description = description:sub(1, 255)
-	end
+        description = description:sub(1, 255)
+    end
     return api.request(
         config.endpoint .. api.token .. '/setChatDescription',
         {
@@ -723,9 +726,9 @@ end
 
 function api.set_my_commands(commands) -- https://core.telegram.org/bots/api#setmycommands
     return api.request(
-	    config.endpoint .. api.token .. '/setMyCommands',
-	    { ['commands'] = commands }
-	)
+        config.endpoint .. api.token .. '/setMyCommands',
+        { ['commands'] = commands }
+    )
 end
 
 function api.get_my_commands() -- https://core.telegram.org/bots/api#getmycommands
@@ -846,13 +849,13 @@ end
 
 function api.stop_poll(chat_id, message_id, reply_markup) -- https://core.telegram.org/bots/api#stoppoll
     return api.request(
-	    config.endpoint .. api.token .. '/stopPoll',
-	    {
-		    ['chat_id'] = chat_id,
-			['message_id'] = message_id,
-			['reply_markup'] = reply_markup
-		}
-	)
+        config.endpoint .. api.token .. '/stopPoll',
+        {
+            ['chat_id'] = chat_id,
+            ['message_id'] = message_id,
+            ['reply_markup'] = reply_markup
+        }
+    )
 end
 
 function api.delete_message(chat_id, message_id) -- https://core.telegram.org/bots/api#deletemessage
@@ -1134,10 +1137,10 @@ function api.process_update(update)
     elseif update.pre_checkout_query then
         return api.on_pre_checkout_query(update.pre_checkout_query)
     elseif update.poll then
-	    return api.on_poll(update.poll)
-	elseif update.poll_answer then
-	    return api.on_poll_answer
-	end
+        return api.on_poll(update.poll)
+    elseif update.poll_answer then
+        return api.on_poll_answer
+    end
     return false
 end
 
@@ -1265,15 +1268,15 @@ end
 
 function api.chat_permissions(can_send_messages, can_send_media_messages, can_send_polls, can_send_other_messages, can_add_web_page_previews, can_change_info, can_invite_users, can_pin_messages)
     return {
-	    ['can_send_messages'] = can_send_messages,
-		['can_send_media_messages'] = can_send_media_messages,
-		['can_send_polls'] = can_send_polls,
-		['can_send_other_messages'] = can_send_other_messages,
-		['can_add_web_page_previews'] = can_add_web_page_previews,
-		['can_change_info'] = can_change_info,
-		['can_invite_users'] = can_invite_users,
-		['can_pin_messages'] = can_pin_messages
-	}
+        ['can_send_messages'] = can_send_messages,
+        ['can_send_media_messages'] = can_send_media_messages,
+        ['can_send_polls'] = can_send_polls,
+        ['can_send_other_messages'] = can_send_other_messages,
+        ['can_add_web_page_previews'] = can_add_web_page_previews,
+        ['can_change_info'] = can_change_info,
+        ['can_invite_users'] = can_invite_users,
+        ['can_pin_messages'] = can_pin_messages
+    }
 end
 
 -- Functions and meta-methods for handling mask positioning arrays to use with various
