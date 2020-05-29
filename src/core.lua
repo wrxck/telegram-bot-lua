@@ -20,6 +20,7 @@ local https = require('ssl.https')
 local multipart = require('multipart-post')
 local ltn12 = require('ltn12')
 local json = require('dkjson')
+local html = require('htmlEntities')
 local config = require('telegram-bot-lua.config')
 
 function api.configure(token, debug)
@@ -680,7 +681,7 @@ function api.get_chat(chat_id) -- https://core.telegram.org/bots/api#getchat
         if not bio then
             return request
         end
-        bio = bio:gsub('<br>',''):gsub('<a.->(.-)</a>', '%1') -- clear some html, we'll add more to this at some point
+        bio = bio:gsub('%b<>', '')
         bio = html.decode(bio)
         request.result.bio = bio
     end
