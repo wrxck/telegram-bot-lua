@@ -1,5 +1,5 @@
 package = "telegram-bot-lua"
-version = "1.9-0"
+version = "1.9-1"
 
 source = {
     url = "git://github.com/wrxck/telegram-bot-lua.git",
@@ -28,7 +28,8 @@ dependencies = {
     "luasec >= 0.6-1",
     "luasocket >= 3.0rc1-2",
     "multipart-post >= 1.1-1",
-    "luautf8 >= 0.1.1-1"
+    "luautf8 >= 0.1.1-1",
+    "html-entities >= 1.3.1-0"
 }
 
 build = {

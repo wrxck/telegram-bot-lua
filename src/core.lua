@@ -9,7 +9,7 @@
                        __/ |
                       |___/
 
-      Version 1.9-0
+      Version 1.9-1
       Copyright (c) 2020 Matthew Hesketh
       See LICENSE for details
 
@@ -680,7 +680,8 @@ function api.get_chat(chat_id) -- https://core.telegram.org/bots/api#getchat
         if not bio then
             return request
         end
-        bio = bio:gsub('%<br%>', '\n'):gsub('%<a.-%>(.-)%</a%>','%1') -- clear some html, we'll add more to this at some point
+        bio = bio:gsub('%b<>','') -- clear some html, we'll add more to this at some point
+        bio = html.decode(bio)
         request.result.bio = bio
     end
     return request
@@ -1880,6 +1881,33 @@ function api.labeled_price(label, amount, encoded)
         button = json.encode(button)
     end
     return button
+end
+
+function api.get_chat_member_permissions(chat_id, user_id)
+    if not chat_id or not user_id then
+        return false
+    end
+    local success = api.get_chat_member(chat_id, user_id)
+    if not success then
+        return success
+    end
+    local p = success.result
+    return {
+        ['can_be_edited'] = p.can_be_edited or false,
+        ['can_post_messages'] = p.can_post_messages or false,
+        ['can_edit_messages'] = p.can_edit_messages or false,
+        ['can_delete_messages'] = p.can_delete_messages or false,
+        ['can_restrict_members'] = p.can_restrict_members or false,
+        ['can_promote_members'] = p.can_promote_members or false,
+        ['can_change_info'] = p.can_change_info or false,
+        ['can_invite_users'] = p.can_invite_users or false,
+        ['can_pin_messages'] = p.can_pin_messages or false,
+        ['can_send_messages'] = p.can_send_messages or false,
+        ['can_send_media_messages'] = p.can_send_media_messages or false,
+        ['can_send_polls'] = p.can_send_polls or false,
+        ['can_send_other_messages'] = p.can_send_other_messages or false,
+        ['can_add_web_page_previews'] = p.can_add_web_page_previews or false
+    }
 end
 
 return api
