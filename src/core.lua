@@ -680,7 +680,7 @@ function api.get_chat(chat_id) -- https://core.telegram.org/bots/api#getchat
         if not bio then
             return request
         end
-        bio = bio:gsub('%b<>','') -- clear some html, we'll add more to this at some point
+        bio = bio:gsub('<br>',''):gsub('<a.->(.-)</a>', '%1') -- clear some html, we'll add more to this at some point
         bio = html.decode(bio)
         request.result.bio = bio
     end
