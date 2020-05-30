@@ -274,17 +274,15 @@ function tools.read_file(path)
 end
 
 function tools.json_to_table(path)
-    if not data or not filename then
-        return false
+    if not path then
+        return {}
     end
-    local mode = append and 'a+' or 'w+'
-    if not filename:match('^/') then
-        filename = '/tmp/' .. filename
+    local parsed = tools.read_file(path)
+    if not parsed then
+        return {}
     end
-    local file = io.open(filename, append)
-    file:write(data)
-    file:close()
-    return filename
+    parsed = json.decode(parsed)
+    return type(parsed) == 'table' and parsed or {}
 end
 
 function tools.get_formatted_user(user_id, name, parse_mode)
