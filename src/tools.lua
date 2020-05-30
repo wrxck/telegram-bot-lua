@@ -241,6 +241,52 @@ function tools.save_to_file(data, filename, append)
     return filename
 end
 
+function tools.file_exists(path)
+    local file = io.open(path, 'rb')
+    if file then
+        file:close()
+    end
+    return file ~= nil
+end
+
+function tools.get_file_as_table(path)
+    if not path or not tools.file_exists(path) then
+        return {}
+    end
+    local file = {}
+    for line in io.lines(file) do
+        file[#file + 1] = line
+    end
+    return file
+end
+
+function tools.read_file(path)
+    if not path then
+        return false
+    end
+    local file = io.open(path, 'rb')
+    if not file then
+        return false
+    end
+    local data = file:read('*all')
+    file:close()
+    return data
+end
+
+function tools.json_to_table(path)
+    if not data or not filename then
+        return false
+    end
+    local mode = append and 'a+' or 'w+'
+    if not filename:match('^/') then
+        filename = '/tmp/' .. filename
+    end
+    local file = io.open(filename, append)
+    file:write(data)
+    file:close()
+    return filename
+end
+
 function tools.get_formatted_user(user_id, name, parse_mode)
     if not user_id or not name then
         return false
