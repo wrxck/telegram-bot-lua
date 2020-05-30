@@ -21,6 +21,7 @@ local https = require('ssl.https')
 local http = require('socket.http')
 local socket = require('socket')
 local ltn12 = require('ltn12')
+local json = require('dkjson')
 local utf8 = utf8 or require('lua-utf8') -- Lua 5.2 compatibility.
 
 function tools.comma_value(amount)
