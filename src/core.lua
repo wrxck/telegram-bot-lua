@@ -1984,4 +1984,69 @@ function api.get_chat_member_permissions(chat_id, user_id)
     }
 end
 
+function api.is_user_kicked(chat_id, user_id)
+    if not chat_id or not user_id then
+        return false
+    end
+    local user, res = api.get_chat_member(chat_id, user_id)
+    if not user or not user.result then
+        return false, res
+    elseif user.result.status == 'kicked' then
+        return true, res
+    end
+    return false, user.result.status
+end
+
+function api.is_user_group_admin(chat_id, user_id)
+    if not chat_id or not user_id then
+        return false
+    end
+    local user, res = api.get_chat_member(chat_id, user_id)
+    if not user or not user.result then
+        return false, res
+    elseif user.result.status == ('administrator' or 'creator') then
+        return true, res
+    end
+    return false, user.result.status
+end
+
+function api.is_user_group_creator(chat_id, user_id)
+    if not chat_id or not user_id then
+        return false
+    end
+    local user, res = api.get_chat_member(chat_id, user_id)
+    if not user or not user.result then
+        return false, res
+    elseif user.result.status == 'creator' then
+        return true, res
+    end
+    return false, user.result.status
+end
+
+function api.is_user_restricted(chat_id, user_id)
+    if not chat_id or not user_id then
+        return false
+    end
+    local user, res = api.get_chat_member(chat_id, user_id)
+    if not user or not user.result then
+        return false, res
+    elseif user.result.status == 'kicked' then
+        return true, res
+    end
+    return false, user.result.status
+end
+
+function api.has_user_left(chat_id, user_id)
+    if not chat_id or not user_id then
+        return false
+    end
+    local user, res = api.get_chat_member(chat_id, user_id)
+    if not user or not user.result then
+        return false, res
+    elseif user.result.status == 'left' then
+        return true, res
+    end
+    return false, user.result.status
+end
+
 return api
