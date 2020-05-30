@@ -89,7 +89,7 @@ function api.request(endpoint, parameters, file)
         print(output)
         return false, jdat
     end
-    return jdat, code
+    return jdat, res
 end
 
 function api.get_me()
