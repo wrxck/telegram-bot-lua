@@ -761,6 +761,38 @@ function api.get_chat_member(chat_id, user_id) -- https://core.telegram.org/bots
             ['user_id'] = user_id
         }
     )
+    if not success then
+        return success, res
+    end
+    local chat = api.get_chat(chat_id)
+    if not chat then
+        return success, res
+    end
+    chat = chat.result.permissions
+    if success.result.can_change_info == nil then
+        success.result.can_change_info = chat.can_change_info
+    end
+    if success.result.can_invite_users == nil then
+        success.result.can_invite_users = chat.can_invite_users
+    end
+    if success.result.can_pin_messages == nil then
+        success.result.can_pin_messages = chat.can_pin_messages
+    end
+    if success.result.can_send_messages == nil then
+        success.result.can_send_messages = chat.can_send_messages
+    end
+    if success.result.can_send_media_messages == nil then
+        success.result.can_send_media_messages = chat.can_send_media_messages
+    end
+    if success.result.can_send_polls == nil then
+        success.result.can_send_polls = chat.can_send_polls
+    end
+    if success.result.can_send_other_messages == nil then
+        success.result.can_send_other_messages = chat.can_send_other_messages
+    end
+    if success.result.can_add_web_page_previews == nil then
+        success.result.can_add_web_page_previews = chat.can_add_web_page_previews
+    end
     return success, res
 end
 
