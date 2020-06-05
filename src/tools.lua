@@ -212,6 +212,7 @@ function tools.download_file(url, name, path)
         }
     )
     if res ~= 200 then
+        print(res)
         return false
     end
     path = path and tostring(path) or '/tmp/'
