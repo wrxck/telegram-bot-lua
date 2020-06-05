@@ -26,6 +26,7 @@ local utf8 = utf8 or require('lua-utf8') -- Lua 5.2 compatibility.
 
 function tools.comma_value(amount)
     amount = tostring(amount)
+    local k
     while true do
         amount, k = amount:gsub('^(-?%d+)(%d%d%d)', '%1,%2')
         if k == 0 then

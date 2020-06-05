@@ -529,7 +529,7 @@ function api.kick_chat_member(chat_id, user_id)
     if not success then
         return success, res
     end
-    success, res = api.unban_chat_member(chat_id, user_id, token)
+    success, res = api.unban_chat_member(chat_id, user_id)
     return success, res
 end
 
@@ -719,12 +719,12 @@ function api.get_chat(chat_id) -- https://core.telegram.org/bots/api#getchat
         { ['chat_id'] = chat_id }
     )
     if not success or not success.result then
-        return success, res
+        return success, result
     end
     if success.result.username and success.result.type == 'private' then
         local scrape, scrape_res = https.request('https://t.me/' .. success.result.username)
         if scrape_res ~= 200 then
-            return success, res
+            return success, result
         end
         local bio = scrape:match('%<div class="tgme_page_description "%>(.-)%</div%>')
         if not bio then
@@ -734,7 +734,7 @@ function api.get_chat(chat_id) -- https://core.telegram.org/bots/api#getchat
         bio = html.decode(bio)
         success.result.bio = bio
     end
-    return success, res
+    return success, result
 end
 
 function api.get_chat_administrators(chat_id) -- https://core.telegram.org/bots/api#getchatadministrators
@@ -1645,7 +1645,7 @@ function api.inline_result_meta:longitude(longitude)
 end
 
 function api.inline_result_meta:live_period(live_period)
-    self['live_period'] = tonumber(longitude)
+    self['live_period'] = tonumber(live_period)
     return self
 end
 
