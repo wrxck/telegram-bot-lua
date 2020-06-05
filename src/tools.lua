@@ -203,7 +203,7 @@ function tools.download_file(url, name, path)
     name = name or os.time() .. '.' .. url:match('.+%/%.(.-)$')
     local body = {}
     local protocol = url:match('^https') and https or http
-    local redirect = url:match('^https') and false or true
+    local redirect = url:match('^https') and nil or true
     local _, res = protocol.request(
         {
             ['url'] = url,
@@ -212,7 +212,6 @@ function tools.download_file(url, name, path)
         }
     )
     if res ~= 200 then
-        print(res)
         return false
     end
     path = path and tostring(path) or '/tmp/'
