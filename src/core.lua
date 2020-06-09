@@ -16,8 +16,6 @@
 ]]
 
 local api = {}
-local http = require('socket.http')
-http.TIMEOUT = 10
 local https = require('ssl.https')
 local multipart = require('multipart-post')
 local ltn12 = require('ltn12')
@@ -724,7 +722,10 @@ function api.get_chat(chat_id) -- https://core.telegram.org/bots/api#getchat
         return success, result
     end
     if success.result.username and success.result.type == 'private' then
+        local old_timeout = https.TIMEOUT
+        https.TIMEOUT = 1
         local scrape, scrape_res = https.request('https://t.me/' .. success.result.username)
+        https.TIMEOUT = old_timeout
         if scrape_res ~= 200 then
             return success, result
         end
