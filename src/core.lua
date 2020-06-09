@@ -16,6 +16,8 @@
 ]]
 
 local api = {}
+local http = require('socket.http')
+http.TIMEOUT = 10
 local https = require('ssl.https')
 local multipart = require('multipart-post')
 local ltn12 = require('ltn12')
