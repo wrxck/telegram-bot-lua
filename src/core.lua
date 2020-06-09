@@ -520,16 +520,12 @@ end
 
 function api.kick_chat_member(chat_id, user_id)
     local success, res = api.request(
-        config.endpoint .. api.token .. '/kickChatMember',
+        config.endpoint .. api.token .. '/unbanChatMember',
         {
             ['chat_id'] = chat_id,
             ['user_id'] = user_id
         }
     )
-    if not success then
-        return success, res
-    end
-    success, res = api.unban_chat_member(chat_id, user_id)
     return success, res
 end
 
