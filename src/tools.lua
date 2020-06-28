@@ -366,6 +366,9 @@ function tools.string_hexdump(data, length, size, space)
 end
 
 function tools.table_contains(tab, match)
+    if type(tab) ~= 'table' then
+        return false
+    end
     for _, val in pairs(tab) do
         if val == match then
             return true
