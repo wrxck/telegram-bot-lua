@@ -870,6 +870,7 @@ end
 
 function api.edit_message_media(chat_id, message_id, media, reply_markup, inline_message_id) -- https://core.telegram.org/bots/api#editmessagemedia
     reply_markup = type(reply_markup) == 'table' and json.encode(reply_markup) or reply_markup
+    media = type(media) == 'table' and json.encode(media) or media
     local success, res = api.request(
         config.endpoint .. api.token .. '/editMessageMedia',
         {
