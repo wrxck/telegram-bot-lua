@@ -568,12 +568,25 @@ function tools.is_valid_url(original_url, parts, any)
 end
 
 function tools.file_size(file)
-    if not file then
-        return false, 'No file given!'
+    local is_path = false
+    if type(file) ~= 'userdata' and type(file) ~= 'string' then
+        return false, 'No file/path given!'
+    elseif type(file) == 'string' then
+        is_path = true
+        if not file:match('^/') then
+            file = '/' .. file
+        end
+        if file:match('/$') then
+            file = file:match('^(.-)/$')
+        end
+        file = io.open(file, 'r')
     end
     local current = file:seek()
     local size = file:seek('end')
     file:seek('set', current)
+    if is_path then
+        file:close()
+    end
     return tonumber(size)
 end
 
