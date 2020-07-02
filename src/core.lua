@@ -9,7 +9,7 @@
                        __/ |
                       |___/
 
-      Version 1.9-1
+      Version 1.10-0
       Copyright (c) 2020 Matthew Hesketh
       See LICENSE for details
 
@@ -531,7 +531,7 @@ end
 
 function api.unban_chat_member(chat_id, user_id) -- https://core.telegram.org/bots/api#unbanchatmember
     local success, res
-    for i = 1, 3 do -- Repeat 3 times to ensure the user was unbanned (I've encountered issues before so
+    for _ = 1, 3 do -- Repeat 3 times to ensure the user was unbanned (I've encountered issues before so
     -- this is for precautionary measures.)
         success, res = api.request(
             config.endpoint .. api.token .. '/unbanChatMember',
@@ -1172,24 +1172,24 @@ function api.get_game_high_scores(chat_id, user_id, message_id, inline_message_i
     return success, res
 end
 
-function api.on_update(update) end
-function api.on_message(message) end
-function api.on_private_message(message) end
-function api.on_group_message(message) end
-function api.on_supergroup_message(message) end
-function api.on_callback_query(callback_query) end
-function api.on_inline_query(inline_query) end
-function api.on_channel_post(channel_post) end
-function api.on_edited_message(edited_message) end
-function api.on_edited_private_message(edited_message) end
-function api.on_edited_group_message(edited_message) end
-function api.on_edited_supergroup_message(edited_message) end
-function api.on_edited_channel_post(edited_channel_post) end
-function api.on_chosen_inline_result(chosen_inline_result) end
-function api.on_shipping_query(shipping_query) end
-function api.on_pre_checkout_query(pre_checkout_query) end
-function api.on_poll(poll) end
-function api.on_poll_answer(poll_answer) end
+function api.on_update(_) end
+function api.on_message(_) end
+function api.on_private_message(_) end
+function api.on_group_message(_) end
+function api.on_supergroup_message(_) end
+function api.on_callback_query(_) end
+function api.on_inline_query(_) end
+function api.on_channel_post(_) end
+function api.on_edited_message(_) end
+function api.on_edited_private_message(_) end
+function api.on_edited_group_message(_) end
+function api.on_edited_supergroup_message(_) end
+function api.on_edited_channel_post(_) end
+function api.on_chosen_inline_result(_) end
+function api.on_shipping_query(_) end
+function api.on_pre_checkout_query(_) end
+function api.on_poll(_) end
+function api.on_poll_answer(_) end
 
 function api.process_update(update)
     if update then
@@ -1242,13 +1242,12 @@ function api.run(limit, timeout, offset, allowed_updates, use_beta_endpoint)
     while true do
         local updates = api.get_updates(timeout, offset, limit, allowed_updates, use_beta_endpoint)
         if updates and type(updates) == 'table' and updates.result then
-            for k, v in pairs(updates.result) do
+            for _, v in pairs(updates.result) do
                 api.process_update(v)
                 offset = v.update_id + 1
             end
         end
     end
-    return false
 end
 
 function api.input_text_message_content(message_text, parse_mode, disable_web_page_preview, encoded)
@@ -1905,7 +1904,7 @@ function api.row_meta:pay_button(text, pay)
     return self
 end
 
-function api.row(buttons)
+function api.row(_)
     return setmetatable({}, api.row_meta)
 end
 
@@ -1939,7 +1938,7 @@ function api.input_media_meta:video(media, caption, width, height, duration)
     return self
 end
 
-function api.input_media(input_media)
+function api.input_media(_)
     return setmetatable({}, api.input_media_meta)
 end
 

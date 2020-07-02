@@ -9,7 +9,7 @@
                        __/ |
                       |___/
 
-      Version 1.9-0
+      Version 1.10-0
       Copyright (c) 2020 Matthew Hesketh
       See LICENSE for details
 
@@ -23,6 +23,7 @@ local socket = require('socket')
 local ltn12 = require('ltn12')
 local json = require('dkjson')
 local utf8 = utf8 or require('lua-utf8') -- Lua 5.2 compatibility.
+local b64url = require('telegram-bot-lua.b64url')
 
 function tools.comma_value(amount)
     amount = tostring(amount)
@@ -48,7 +49,6 @@ function tools.format_time(seconds)
     if not seconds or tonumber(seconds) == nil then
         return false
     end
-    local output = ''
     seconds = tonumber(seconds) -- Make sure we're handling a numerical value
     local minutes = math.floor(seconds / 60)
     if minutes == 0 then
@@ -242,7 +242,7 @@ function tools.save_to_file(data, filename, append)
     if not filename:match('^/') then
         filename = '/tmp/' .. filename
     end
-    local file = io.open(filename, append)
+    local file = io.open(filename, mode)
     file:write(data)
     file:close()
     return filename
@@ -329,7 +329,7 @@ function tools.random_string(length, amount)
     math.randomseed(seed)
     if amount and tonumber(amount) ~= nil then
         local output = {}
-        for i = 1, tonumber(amount) do
+        for _ = 1, tonumber(amount) do
             local value = tools.random_string(length - 1) .. tools.random_string_charset[math.random(1, #tools.random_string_charset)]
             table.insert(output, value)
         end
@@ -383,7 +383,7 @@ function tools.table_random(tab, seed)
     end
     tab = type(tab) == 'table' and tab or { tostring(tab) }
     local total = 0
-    for key, chance in pairs(tab) do
+    for _, chance in pairs(tab) do
         total = total + chance
     end
     local choice = math.random() * total
@@ -440,7 +440,7 @@ function tools.service_message(message)
 end
 
 function tools.is_media(message)
-    if message.audio or message.document or message.game or message.photo or message.sticker or message.video or message.voice or message.video_note or message.contact or message.location or message.venue or message.invoice then
+    if message.audio or message.document or message.game or message.photo or message.sticker or message.video or message.voice or message.video_note or message.contact or message.location or message.venue or message.invoice or message.poll or message.dice then
         return true
     end
     return false
@@ -483,24 +483,121 @@ function tools.media_type(message)
     return ''
 end
 
-function tools.file_id(message, unique_sticker)
+function tools.file_id(message, unique)
     if message.audio then
+        if unique then
+            return message.audio.file_unique_id
+        end
         return message.audio.file_id
     elseif message.document then
+        if unique then
+            return message.document.file_unique_id
+        end
         return message.document.file_id
     elseif message.sticker then
-        if unique_sticker then
+        if unique then
             return message.sticker.file_unique_id
         end
         return message.sticker.file_id
     elseif message.video then
+        if unique then
+            return message.video.file_unique_id
+        end
         return message.video.file_id
     elseif message.voice then
+        if unique then
+            return message.voice.file_unique_id
+        end
         return message.voice.file_id
     elseif message.video_note then
+        if unique then
+            return message.video_note.file_unique_id
+        end
         return message.video_note.file_id
+    elseif message.photo then -- Get the highest resolution for photos.
+        if unique then
+            return message.photo[#message.photo].file_unique_id
+        end
+        return message.photo[#message.photo].file_id
     end
     return ''
+end
+
+function tools.is_duplicate(tab, val)
+    local seen = {}
+    local duplicated = {}
+    for i = 1, #tab do
+        local element = tab[i]
+        if seen[element] then
+            duplicated[element] = true
+        else
+            seen[element] = true
+        end
+    end
+    if val and duplicated[val] then
+        return true
+    elseif val then
+        return false
+    end
+    return duplicated
+end
+
+function tools.is_valid_url(original_url, parts, any)
+    if not original_url then
+        return false
+    end
+    original_url = tostring(original_url)
+    if not original_url:match('^[Hh][Tt][Tt][Pp][Ss]?://') and not any then
+        original_url = 'http://' .. original_url
+    end
+    -- Thanks to https://stackoverflow.com/questions/23590304/finding-a-url-in-a-string-lua-pattern
+    local url, protocol, subdomain, tld, colon, port, slash, path = string.match(original_url, '^(([%w_.~!*:@&+$/?%%#-]-)(%w[-.%w]*%.)(%w+)(:?)(%d*)(/?)([%w_.~!*:@&+$/?%%#=-]*))$')
+    if parts then
+        return {
+            ['url'] = url,
+            ['protocol'] = protocol,
+            ['subdomain'] = subdomain,
+            ['tld'] = tld,
+            ['colon'] = colon,
+            ['port'] = port,
+            ['slash'] = slash,
+            ['path'] = path
+        }
+    end
+    return url and true or false, url
+end
+
+function tools.file_size(file)
+    if not file then
+        return false, 'No file given!'
+    end
+    local current = file:seek()
+    local size = file:seek('end')
+    file:seek('set', current)
+    return tonumber(size)
+end
+
+function tools.unpack_telegram_invite_link(link)
+    if not link then
+        return false, 'No link given!'
+    elseif link:match('joinchat/') then
+        link = link:match('joinchat/(.-)$')
+    end
+    local append = ''
+    local amount = (string.len(link) % 4)
+    for _ = 1, amount do
+        append = append .. '='
+    end
+    local decoded = b64url.decode(link .. append)
+    if not decoded then
+        return false, 'Could not decode!'
+    end
+    local user_id, chat_id, rand_long = string.unpack('>IIL', decoded)
+    return {
+        ['user_id'] = user_id,
+        ['chat_id'] = chat_id,
+        ['rand_long'] = rand_long
+    }
 end
 
 return tools
