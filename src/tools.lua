@@ -590,6 +590,23 @@ function tools.file_size(file)
     return tonumber(size)
 end
 
+function tools.rle_encode(s)
+    local new, count = '', 0
+    for i = 1, #s do
+        local current = s:sub(i,i)
+        if current == string.char(0) then
+            count = count + 1
+        else
+            if count > 0 then
+                new = new .. string.char(0) .. string.char(count)
+                count = 0
+            end
+            new = new .. current
+        end
+    end
+    return new
+end
+
 function tools.unpack_telegram_invite_link(link)
     if not link then
         return false, 'No link given!'
@@ -610,6 +627,86 @@ function tools.unpack_telegram_invite_link(link)
         ['user_id'] = user_id,
         ['chat_id'] = chat_id,
         ['rand_long'] = rand_long
+    }
+end
+
+function tools.unpack_file_id(file_id, media_type)
+    if not file_id then
+        return false, 'No file_id given!'
+    elseif not media_type then
+        media_type = ''
+    end
+    local append = ''
+    local amount = (string.len(file_id) % 4)
+    for _ = 1, amount do
+        append = append .. '='
+    end
+    local decoded = tools.rle_decode(b64url.decode(file_id .. append))
+    if not decoded then
+        return false, 'Could not decode!'
+    end
+    local file_type = string.unpack('<b', decoded)
+    local dc_id = string.unpack('<i', decoded:sub(5, 8))
+    local file_flags = string.unpack('<i', string.char(0) .. decoded:sub(2, 4))
+    local version = string.byte(decoded:sub(-1))
+    local subversion = (version == 4) and string.byte(decoded:sub(-2, -1)) or 0
+    decoded = decoded:sub(9, -1)
+    local file_reference_flag = 1 << 25
+    if not ((file_flags & file_reference_flag) == 0) then
+        local file_reference_length = string.byte(decoded:sub(1, 1))
+        local padding = 0
+        decoded = string.char(0) .. decoded:sub(2, -1)
+        if file_reference_length == 254 then
+            file_reference_length = string.unpack('<i', decoded)
+            padding = math.abs(-file_reference_length % 4)
+        else
+            padding = math.abs(file_reference_length % -4)
+        end
+        decoded = decoded:sub(file_reference_length + padding + 1, -1)
+    end
+    local user_id, access_hash = string.unpack('<ll', decoded)
+    local payload = {
+        ['file_id'] = file_id,
+        ['file_type'] = file_type,
+        ['media_type'] = media_type,
+        ['file_flags'] = file_flags,
+        ['version'] = version,
+        ['subversion'] = subversion,
+        ['dc_id'] = dc_id,
+        ['access_hash'] = access_hash
+    }
+    if media_type == 'photo' then
+        local encrypted_user_id, access_hash, volume_id, secret, _, local_id = string.unpack('<llllii', decoded)
+        payload.encrypted_user_id = encrypted_user_id
+        payload.access_hash = access_hash
+        payload.volume_id = volume_id
+        payload.secret = secret
+        payload.local_id = local_id
+    elseif media_type == 'sticker' then
+        payload.user_id = user_id >> 32
+    end
+    return payload
+end
+
+function tools.unpack_inline_message_id(inline_message_id)
+    if not inline_message_id then
+        return false, 'No inline_message_id given!'
+    end
+    local append = ''
+    local amount = (string.len(inline_message_id) % 4)
+    for _ = 1, amount do
+        append = append .. '='
+    end
+    local decoded = b64url.decode(inline_message_id .. append)
+    if not decoded then
+        return false, 'Could not decode!'
+    end
+    local dc_id, message_id, chat_id, access_hash = string.unpack('<iiI', decoded)
+    return {
+        ['dc_id'] = dc_id,
+        ['message_id'] = message_id,
+        ['chat_id'] = chat_id,
+        ['access_hash'] = access_hash
     }
 end
 
