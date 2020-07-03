@@ -607,6 +607,23 @@ function tools.rle_encode(s)
     return new
 end
 
+function tools.rle_decode(input)
+    local new = ''
+    local last = ''
+    local length = #input
+    for i = 1, length do
+        local current = input:sub(i, i)
+        if last == string.char(0) then
+            new = new .. string.rep(last, string.byte(current))
+            last = ''
+        else
+            new =  new .. last
+            last = current
+        end
+    end
+    return new .. last
+end
+
 function tools.unpack_telegram_invite_link(link)
     if not link then
         return false, 'No link given!'
@@ -654,7 +671,7 @@ function tools.unpack_file_id(file_id, media_type)
     local file_reference_flag = 1 << 25
     if not ((file_flags & file_reference_flag) == 0) then
         local file_reference_length = string.byte(decoded:sub(1, 1))
-        local padding = 0
+        local padding
         decoded = string.char(0) .. decoded:sub(2, -1)
         if file_reference_length == 254 then
             file_reference_length = string.unpack('<i', decoded)
@@ -676,9 +693,9 @@ function tools.unpack_file_id(file_id, media_type)
         ['access_hash'] = access_hash
     }
     if media_type == 'photo' then
-        local encrypted_user_id, access_hash, volume_id, secret, _, local_id = string.unpack('<llllii', decoded)
+        local encrypted_user_id, new_access_hash, volume_id, secret, _, local_id = string.unpack('<llllii', decoded)
         payload.encrypted_user_id = encrypted_user_id
-        payload.access_hash = access_hash
+        payload.access_hash = new_access_hash
         payload.volume_id = volume_id
         payload.secret = secret
         payload.local_id = local_id
