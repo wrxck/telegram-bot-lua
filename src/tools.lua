@@ -727,4 +727,16 @@ function tools.unpack_inline_message_id(inline_message_id)
     }
 end
 
+function tools.split_string(str, reverse)
+    local tab = {}
+    for prt in str:gmatch('([^%s]+)') do
+        if reverse then -- Useful for flipping RTL words.
+            table.insert(tab, 1, prt)
+        else
+            table.insert(tab, prt)
+        end
+    end
+    return tab
+end
+
 return tools
