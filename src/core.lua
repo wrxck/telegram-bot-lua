@@ -31,7 +31,7 @@ function api.configure(token, debug)
     api.token = assert(token, 'Please specify your bot API token you received from @BotFather!')
     repeat
         api.info = api.get_me()
-    until api.info.result
+    until api.info and api.info.result
     api.info = api.info.result
     api.info.name = api.info.first_name
     return api
