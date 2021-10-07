@@ -841,8 +841,9 @@ function api.edit_message_text(chat_id, message_id, text, parse_mode, disable_we
     return success, res
 end
 
-function api.edit_message_caption(chat_id, message_id, caption, reply_markup, inline_message_id) -- https://core.telegram.org/bots/api#editmessagecaption
+function api.edit_message_caption(chat_id, message_id, caption, parse_mode, reply_markup, inline_message_id) -- https://core.telegram.org/bots/api#editmessagecaption
     reply_markup = type(reply_markup) == 'table' and json.encode(reply_markup) or reply_markup
+    parse_mode = (type(parse_mode) == 'boolean' and parse_mode == true) and 'markdown' or parse_mode
     local success, res = api.request(
         config.endpoint .. api.token .. '/editMessageCaption',
         {
@@ -850,6 +851,7 @@ function api.edit_message_caption(chat_id, message_id, caption, reply_markup, in
             ['message_id'] = message_id,
             ['inline_message_id'] = inline_message_id,
             ['caption'] = caption,
+            ['parse_mode'] = parse_mode,
             ['reply_markup'] = reply_markup
         }
     )
@@ -861,6 +863,7 @@ function api.edit_message_caption(chat_id, message_id, caption, reply_markup, in
                 ['message_id'] = inline_message_id,
                 ['inline_message_id'] = message_id,
                 ['caption'] = caption,
+                ['parse_mode'] = parse_mode,
                 ['reply_markup'] = reply_markup
             }
         )
