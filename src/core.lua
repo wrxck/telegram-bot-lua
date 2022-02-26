@@ -1234,7 +1234,7 @@ function api.process_update(update)
     end
     return false
 end
-
+isInit_app = false
 function api.run(limit, timeout, offset, allowed_updates, use_beta_endpoint)
     limit = tonumber(limit) ~= nil and limit or 1
     timeout = tonumber(timeout) ~= nil and timeout or 0
@@ -1243,7 +1243,8 @@ function api.run(limit, timeout, offset, allowed_updates, use_beta_endpoint)
         local updates = api.get_updates(timeout, offset, limit, allowed_updates, use_beta_endpoint)
         if updates and type(updates) == 'table' and updates.result then
             for _, v in pairs(updates.result) do
-                api.process_update(v)
+                if isInit_app == false then isInit_app = true else api.process_update(v) end
+                -- you do not need to check all updates with first start as it may end with a ton of new messages that you will be late to respond to.
                 offset = v.update_id + 1
             end
         end
