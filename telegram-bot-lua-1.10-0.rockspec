@@ -2,7 +2,7 @@ package = "telegram-bot-lua"
 version = "1.10-0"
 
 source = {
-    url = "git://github.com/wrxck/telegram-bot-lua.git",
+    url = "git+https://github.com/wrxck/telegram-bot-lua.git",
     dir = "telegram-bot-lua",
     branch = "main"
 }
