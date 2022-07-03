@@ -1191,7 +1191,8 @@ function api.on_pre_checkout_query(_) end
 function api.on_poll(_) end
 function api.on_poll_answer(_) end
 
-function api.process_update(update)
+function api.
+_update(update)
     if update then
         api.on_update(update)
     end
@@ -1242,10 +1243,12 @@ function api.run(limit, timeout, offset, allowed_updates, use_beta_endpoint)
     while true do
         local updates = api.get_updates(timeout, offset, limit, allowed_updates, use_beta_endpoint)
         if updates and type(updates) == 'table' and updates.result then
+            if isInit_app == false then isInit_app = true else 
+            -- you do not need to check all updates with first start as it may end with a ton of new messages that you will be late to respond to.
             for _, v in pairs(updates.result) do
-                if isInit_app == false then isInit_app = true else api.process_update(v) end
-                -- you do not need to check all updates with first start as it may end with a ton of new messages that you will be late to respond to.
+                api.process_update(v)
                 offset = v.update_id + 1
+            end
             end
         end
     end
