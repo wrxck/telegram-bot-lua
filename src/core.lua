@@ -1191,8 +1191,7 @@ function api.on_pre_checkout_query(_) end
 function api.on_poll(_) end
 function api.on_poll_answer(_) end
 
-function api.
-_update(update)
+function api.process_update(update)
     if update then
         api.on_update(update)
     end
