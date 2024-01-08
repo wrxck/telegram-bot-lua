@@ -1,5 +1,5 @@
 package = "telegram-bot-lua"
-version = "1.10-0"
+version = "2.0-RC1"
 
 source = {
     url = "git://github.com/wrxck/telegram-bot-lua.git",
@@ -12,7 +12,7 @@ description = {
     detailed = "A simple yet extensive Lua library for the Telegram bot API, with many tools and API-friendly functions.",
     license = "GPL-3",
     homepage = "https://github.com/wrxck/telegram-bot-lua",
-    maintainer = "Matthew Hesketh <matthew@matthewhesketh.com>"
+    maintainer = "Matthew Hesketh <matt@matthesketh.pro>"
 }
 
 supported_platforms = {

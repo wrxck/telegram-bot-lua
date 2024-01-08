@@ -9,8 +9,8 @@
                        __/ |
                       |___/
 
-      Version 1.10-0
-      Copyright (c) 2020 Matthew Hesketh
+      Version 2.0 RC1
+      Copyright (c) 2017-2024 Matthew Hesketh
       See LICENSE for details
 
 ]]
