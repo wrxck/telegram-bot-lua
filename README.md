@@ -4,8 +4,6 @@ A feature-filled Telegram bot API library written in Lua, created by [Matt](http
 
 This library was written to complement the "[mattata](https://github.com/wrxck/mattata)" project, allowing anybody to create their own Telegram bot with little coding knowledge needed (that is, except a basic knowledge of Lua and the inspiration provided by [@mattatabot](https://t.me/mattatabot) and this library).
 
-The licensing situation is currently [under investigation](https://github.com/topkecleon/otouto/issues/123), but **don't panic**, it'll get resolved cleanly.
-
 | Contents                                                              |
 |-----------------------------------------------------------------------|
 | [Installation](#installation)                                         |
@@ -211,6 +209,9 @@ This is what will run your bot!
 | [getUpdates](#getupdates)                         |
 | [sendMessage](#sendmessage)                       |
 | [forwardMessage](#forwardmessage)                 |
+| [forwardMessages](#forwardmessages)               |
+| [copyMessage](#copymessage)                       |
+| [copyMessages](#copymessages)                     |
 | [sendPhoto](#sendphoto)                           |
 | [sendAudio](#sendaudio)                           |
 | [sendDocument](#senddocument)                     |
@@ -278,45 +279,140 @@ Use this function to send text messages, using Telegram's `sendMessage` method.
 
 ```Lua
 api.send_message(
-    chat_id,
+    chat_id [or message object],
     text,
+    message_thread_id,
     parse_mode,
-    disable_web_page_preview,
+    entities,
+    link_preview_options,
     disable_notification,
-    reply_to_message_id,
+    protect_content,
+    reply_parameters,
     reply_markup
 )
 ```
 
-| Parameters                  | Type                                                                             | Required | Description                                                                                                                                                                    |
-|-----------------------------|----------------------------------------------------------------------------------|----------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| chat\_id                    | Integer or String                                                                | Yes      | Unique identifier for the target chat or username of the target channel (in the format @channelusername)                                                                       |
-| text                        | String                                                                           | Yes      | Text of the message to be sent                                                                                                                                                 |
-| parse\_mode                 | String                                                                           | Optional | Send `Markdown` or `HTML`, if you want Telegram apps to show bold, italic, fixed-width text or inline URLs in your bot's message.                                              |
-| disable\_web\_page\_preview | Boolean                                                                          | Optional | Disables link previews for links in this message                                                                                                                               |
-| disable\_notification       | Boolean                                                                          | Optional | Sends the message silently. iOS users will not receive a notification, Android users will receive a notification with no sound.                                                |
-| reply\_to\_message\_id      | Integer                                                                          | Optional | If the message is a reply, ID of the original message                                                                                                                          |
-| reply\_markup               | InlineKeyboardMarkup or ReplyKeyboardMarkup or ReplyKeyboardRemove or ForceReply | Optional | Additional interface options. A JSON-serialized object for an inline keyboard, custom reply keyboard, instructions to remove reply keyboard or to force a reply from the user. |
+
+| Parameter            | Type                                                                                                                                                                                                                                                                                                             | Required | Description                                                                                                                                                                                                                                                                                     |
+| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| chat\_id              | Integer or String                                                                                                                                                                                                                                                                                                | Yes      | Unique identifier for the target chat or username of the target channel (in the format `@channelusername`)                                                                                                                                                                                      |
+| message\_thread\_id    | Integer                                                                                                                                                                                                                                                                                                          | Optional | Unique identifier for the target message thread (topic) of the forum; for forum supergroups only                                                                                                                                                                                                |
+| text                 | String                                                                                                                                                                                                                                                                                                           | Yes      | Text of the message to be sent, 1-4096 characters after entities parsing                                                                                                                                                                                                                        |
+| parse_mode           | String                                                                                                                                                                                                                                                                                                           | Optional | Mode for parsing entities in the message text. See [formatting options](https://core.telegram.org/bots/api#formatting-options) for more details.                                                                                                                                                |
+| entities             | Array of [MessageEntity](https://core.telegram.org/bots/api#messageentity)                                                                                                                                                                                                                                       | Optional | A JSON-serialized list of special entities that appear in message text, which can be specified instead of _parse\_mode_                                                                                                                                                                          |
+| link\_preview\_options | [LinkPreviewOptions](https://core.telegram.org/bots/api#linkpreviewoptions)                                                                                                                                                                                                                                      | Optional | Link preview generation options for the message                                                                                                                                                                                                                                                 |
+| disable\_notification | Boolean                                                                                                                                                                                                                                                                                                          | Optional | Sends the message [silently](https://telegram.org/blog/channels-2-0#silent-messages). Users will receive a notification with no sound.                                                                                                                                                          |
+| protect\_content      | Boolean                                                                                                                                                                                                                                                                                                          | Optional | Protects the contents of the sent message from forwarding and saving                                                                                                                                                                                                                            |
+| reply\_parameters     | [ReplyParameters](https://core.telegram.org/bots/api#replyparameters)                                                                                                                                                                                                                                            | Optional | Description of the message to reply to                                                                                                                                                                                                                                                          |
+| reply\_markup         | [InlineKeyboardMarkup](https://core.telegram.org/bots/api#inlinekeyboardmarkup) or [ReplyKeyboardMarkup](https://core.telegram.org/bots/api#replykeyboardmarkup) or [ReplyKeyboardRemove](https://core.telegram.org/bots/api#replykeyboardremove) or [ForceReply](https://core.telegram.org/bots/api#forcereply) | Optional | Additional interface options. A JSON-serialized object for an [inline keyboard](https://core.telegram.org/bots/features#inline-keyboards), [custom reply keyboard](https://core.telegram.org/bots/features#keyboards), instructions to remove reply keyboard or to force a reply from the user. |
 
 #### forwardMessage
 
-Use this function to forward messages of any kind, using Telegram's `forwardMessage` method.
+Use this function to forward a single message of any kind, using Telegram's `forwardMessage` method.
 
 ```Lua
 api.forward_message(
     chat_id,
     from_chat_id,
+    message_id,
+    message_thread_id,
     disable_notification,
-    message_id
+    protect_content
 )
 ```
 
-| Parameters            | Type              | Required | Description                                                                                                                     |
-|-----------------------|-------------------|----------|---------------------------------------------------------------------------------------------------------------------------------|
-| chat\_id              | Integer or String | Yes      | Unique identifier for the target chat or username of the target channel (in the format @channelusername)                        |
-| from\_chat\_id        | Integer or String | Yes      | Unique identifier for the chat where the original message was sent (or channel username in the format @channelusername)         |
-| disable\_notification | Boolean           | Optional | Sends the message silently. iOS users will not receive a notification, Android users will receive a notification with no sound. |
-| message\_id           | Integer           | Yes      | Message identifier in the chat specified in from\_chat\_id                                                                      |
+| Parameter            | Type              | Required | Description                                                                                                                            |
+| -------------------- | ----------------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| chat_id              | Integer or String | Yes      | Unique identifier for the target chat or username of the target channel (in the format `@channelusername`)                             |
+| message\_thread\_id    | Integer           | Optional | Unique identifier for the target message thread (topic) of the forum; for forum supergroups only                                       |
+| from\_chat\_id         | Integer or String | Yes      | Unique identifier for the chat where the original message was sent (or channel username in the format `@channelusername`)              |
+| disable\_notification | Boolean           | Optional | Sends the message [silently](https://telegram.org/blog/channels-2-0#silent-messages). Users will receive a notification with no sound. |
+| protect\_content      | Boolean           | Optional | Protects the contents of the forwarded message from forwarding and saving                                                              |
+| message\_id           | Integer           | Yes      | Message identifier in the chat specified in _from\_chat_id_                                                                             |
+
+#### forwardMessages
+
+Use this function to forward multiple messages of any kind, using Telegram's `forwardMessages` method.
+
+```Lua
+api.forward_messages(
+    chat_id,
+    from_chat_id,
+    message_ids,
+    message_thread_id,
+    disable_notification,
+    protect_content
+)
+```
+
+| Parameter            | Type              | Required | Description                                                                                                                             |
+| -------------------- | ----------------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| chat_id              | Integer or String | Yes      | Unique identifier for the target chat or username of the target channel (in the format `@channelusername`)                              |
+| message\_thread\_id    | Integer           | Optional | Unique identifier for the target message thread (topic) of the forum; for forum supergroups only                                        |
+| from\_chat\_id         | Integer or String | Yes      | Unique identifier for the chat where the original messages were sent (or channel username in the format `@channelusername`)             |
+| message\_ids          | Array of Integer  | Yes      | Identifiers of 1-100 messages in the chat _from\_chat\_id_ to forward. The identifiers must be specified in a strictly increasing order.  |
+| disable\_notification | Boolean           | Optional | Sends the messages [silently](https://telegram.org/blog/channels-2-0#silent-messages). Users will receive a notification with no sound. |
+| protect\_content      | Boolean           | Optional | Protects the contents of the forwarded messages from forwarding and saving                                                              |
+
+#### copyMessage
+
+Use this function to copy a message of any kind (except service messages, giveaway messages, giveaway winners messages, and invoice messages), using Telegram's `copyMessage` method.
+
+```Lua
+api.copy_message(
+    chat_id,
+    from_chat_id,
+    message_id,
+    message_thread_id,
+    caption,
+    parse_mode,
+    caption_entities,
+    disable_notification,
+    protect_content,
+    reply_parameters,
+    reply_markup
+)
+```
+
+| Parameter            | Type                                                                                                                                                                                                                                                                                                             | Required | Description                                                                                                                                                                                                                                                                                     |
+| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| chat_id              | Integer or String                                                                                                                                                                                                                                                                                                | Yes      | Unique identifier for the target chat or username of the target channel (in the format `@channelusername`)                                                                                                                                                                                      |
+| message\_thread\_id    | Integer                                                                                                                                                                                                                                                                                                          | Optional | Unique identifier for the target message thread (topic) of the forum; for forum supergroups only                                                                                                                                                                                                |
+| from\_chat\_id         | Integer or String                                                                                                                                                                                                                                                                                                | Yes      | Unique identifier for the chat where the original message was sent (or channel username in the format `@channelusername`)                                                                                                                                                                       |
+| message\_id           | Integer                                                                                                                                                                                                                                                                                                          | Yes      | Message identifier in the chat specified in _from\_chat\_id_                                                                                                                                                                                                                                      |
+| caption              | String                                                                                                                                                                                                                                                                                                           | Optional | New caption for media, 0-1024 characters after entities parsing. If not specified, the original caption is kept                                                                                                                                                                                 |
+| parse\_mode           | String                                                                                                                                                                                                                                                                                                           | Optional | Mode for parsing entities in the new caption. See [formatting options](https://core.telegram.org/bots/api#formatting-options) for more details.                                                                                                                                                 |
+| caption\_entities     | Array of [MessageEntity](https://core.telegram.org/bots/api#messageentity)                                                                                                                                                                                                                                       | Optional | A JSON-serialized list of special entities that appear in the new caption, which can be specified instead of _parse\_mode_                                                                                                                                                                       |
+| disable\_notification | Boolean                                                                                                                                                                                                                                                                                                          | Optional | Sends the message [silently](https://telegram.org/blog/channels-2-0#silent-messages). Users will receive a notification with no sound.                                                                                                                                                          |
+| protect\_content      | Boolean                                                                                                                                                                                                                                                                                                          | Optional | Protects the contents of the sent message from forwarding and saving                                                                                                                                                                                                                            |
+| reply\_parameters     | [ReplyParameters](https://core.telegram.org/bots/api#replyparameters)                                                                                                                                                                                                                                            | Optional | Description of the message to reply to                                                                                                                                                                                                                                                          |
+| reply\_markup         | [InlineKeyboardMarkup](https://core.telegram.org/bots/api#inlinekeyboardmarkup) or [ReplyKeyboardMarkup](https://core.telegram.org/bots/api#replykeyboardmarkup) or [ReplyKeyboardRemove](https://core.telegram.org/bots/api#replykeyboardremove) or [ForceReply](https://core.telegram.org/bots/api#forcereply) | Optional | Additional interface options. A JSON-serialized object for an [inline keyboard](https://core.telegram.org/bots/features#inline-keyboards), [custom reply keyboard](https://core.telegram.org/bots/features#keyboards), instructions to remove reply keyboard or to force a reply from the user. |
+
+#### copyMessages
+
+Use this function to copy messages of any kind (except service messages, giveaway messages, giveaway winners messages, and invoice messages), using Telegram's `copyMessages` method.
+
+```Lua
+api.copy_messages(
+    chat_id,
+    from_chat_id,
+    message_ids,
+    message_thread_id,
+    disable_notification,
+    protect_content,
+    remove_caption
+)
+```
+
+| Parameter            | Type              | Required | Description                                                                                                                             |
+| -------------------- | ----------------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| chat_id              | Integer or String | Yes      | Unique identifier for the target chat or username of the target channel (in the format `@channelusername`)                              |
+| message_thread_id    | Integer           | Optional | Unique identifier for the target message thread (topic) of the forum; for forum supergroups only                                        |
+| from_chat_id         | Integer or String | Yes      | Unique identifier for the chat where the original messages were sent (or channel username in the format `@channelusername`)             |
+| message_ids          | Array of Integer  | Yes      | Identifiers of 1-100 messages in the chat _from_chat_id_ to copy. The identifiers must be specified in a strictly increasing order.     |
+| disable_notification | Boolean           | Optional | Sends the messages [silently](https://telegram.org/blog/channels-2-0#silent-messages). Users will receive a notification with no sound. |
+| protect_content      | Boolean           | Optional | Protects the contents of the sent messages from forwarding and saving                                                                   |
+| remove_caption       | Boolean           | Optional | Pass _True_ to copy the messages without their captions                                                                                 |
 
 #### sendPhoto
 
@@ -326,21 +422,31 @@ Use this function to send photos, using Telegram's `sendPhoto` method.
 api.send_photo(
     chat_id,
     photo,
+    message_thread_id,
     caption,
+    parse_mode,
+    caption_entities,
+    has_spoiler,
     disable_notification,
-    reply_to_message_id,
+    protect_content,
+    reply_parameters,
     reply_markup
 )
 ```
 
-| Parameters             | Type                                                                             | Required | Description                                                                                                                                                                                                                              |
-|------------------------|----------------------------------------------------------------------------------|----------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| chat\_id               | Integer or String                                                                | Yes      | Unique identifier for the target chat or username of the target channel (in the format @channelusername)                                                                                                                                 |
-| photo                  | InputFile or String                                                              | Yes      | Photo to send. Pass a file\_id as String to send a photo that exists on the Telegram servers (recommended), pass an HTTP URL as a String for Telegram to get a photo from the Internet, or upload a new photo using multipart/form-data. |
-| caption                | String                                                                           | Optional | Photo caption (may also be used when resending photos by file\_id), 0-200 characters                                                                                                                                                     |
-| disable\_notification  | Boolean                                                                          | Optional | Sends the message silently. iOS users will not receive a notification, Android users will receive a notification with no sound.                                                                                                          |
-| reply\_to\_message\_id | Integer                                                                          | Optional | If the message is a reply, ID of the original message                                                                                                                                                                                    |
-| reply\_markup          | InlineKeyboardMarkup or ReplyKeyboardMarkup or ReplyKeyboardRemove or ForceReply | Optional | Additional interface options. A JSON-serialized object for an inline keyboard, custom reply keyboard, instructions to remove reply keyboard or to force a reply from the user.                                                           |
+| Parameter            | Type                                                                                                                                                                                                                                                                                                          | Required | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| chat\_id              | Integer or String                                                                                                                                                                                                                                                                                             | Yes      | Unique identifier for the target chat or username of the target channel (in the format `@channelusername`)                                                                                                                                                                                                                                                                                                                                                                       |
+| message\_thread\_id    | Integer                                                                                                                                                                                                                                                                                                       | Optional | Unique identifier for the target message thread (topic) of the forum; for forum supergroups only                                                                                                                                                                                                                                                                                                                                                                                 |
+| photo                | [InputFile](https://core.telegram.org/bots/api#inputfile) or String                                                                                                                                                                                                                                           | Yes      | Photo to send. Pass a file\_id as String to send a photo that exists on the Telegram servers (recommended), pass an HTTP URL as a String for Telegram to get a photo from the Internet, or upload a new photo using multipart/form-data. The photo must be at most 10 MB in size. The photo's width and height must not exceed 10000 in total. Width and height ratio must be at most 20. [More information on Sending Files »](https://core.telegram.org/bots/api#sending-files) |
+| caption              | String                                                                                                                                                                                                                                                                                                        | Optional | Photo caption (may also be used when resending photos by _file\_id_), 0-1024 characters after entities parsing                                                                                                                                                                                                                                                                                                                                                                    |
+| parse\_mode           | String                                                                                                                                                                                                                                                                                                        | Optional | Mode for parsing entities in the photo caption. See [formatting options](https://core.telegram.org/bots/api#formatting-options) for more details.                                                                                                                                                                                                                                                                                                                                |
+| caption\_entities     | Array of [MessageEntity](https://core.telegram.org/bots/api#messageentity)                                                                                                                                                                                                                                    | Optional | A JSON-serialized list of special entities that appear in the caption, which can be specified instead of _parse\_mode_                                                                                                                                                                                                                                                                                                                                                            |
+| has\_spoiler          | Boolean                                                                                                                                                                                                                                                                                                       | Optional | Pass _True_ if the photo needs to be covered with a spoiler animation                                                                                                                                                                                                                                                                                                                                                                                                            |
+| disable\_notification | Boolean                                                                                                                                                                                                                                                                                                       | Optional | Sends the message [silently](https://telegram.org/blog/channels-2-0#silent-messages). Users will receive a notification with no sound.                                                                                                                                                                                                                                                                                                                                           |
+| protect\_content      | Boolean                                                                                                                                                                                                                                                                                                       | Optional | Protects the contents of the sent message from forwarding and saving                                                                                                                                                                                                                                                                                                                                                                                                             |
+| reply\_parameters     | [ReplyParameters](https://core.telegram.org/bots/api#replyparameters)                                                                                                                                                                                                                                         | Optional | Description of the message to reply to                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| reply\_markup         | [InlineKeyboardMarkup](https://core.telegram.org/bots/api#inlinekeyboardmarkup)or [ReplyKeyboardMarkup](https://core.telegram.org/bots/api#replykeyboardmarkup)or [ReplyKeyboardRemove](https://core.telegram.org/bots/api#replykeyboardremove)or [ForceReply](https://core.telegram.org/bots/api#forcereply) | Optional | Additional interface options. A JSON-serialized object for an [inline keyboard](https://core.telegram.org/bots/features#inline-keyboards), [custom reply keyboard](https://core.telegram.org/bots/features#keyboards), instructions to remove reply keyboard or to force a reply from the user.                                                                                                                                                                                  |
 
 #### sendAudio
 
