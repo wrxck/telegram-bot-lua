@@ -85,7 +85,9 @@ function tools.round(num, idp)
 end
 
 function tools.pretty_print(table)
-    return json.encode(table, { ['indent'] = true })
+    return json.encode(table, {
+        ['indent'] = true
+    })
 end
 
 tools.commands_meta = {}
@@ -297,7 +299,7 @@ function tools.get_formatted_user(user_id, name, parse_mode)
         return false
     end
     if not parse_mode or type(parse_mode) == ('nil' or 'boolean') then
-        parse_mode = 'markdown'
+        parse_mode = 'MarkdownV2'
     end
     local user_id_string = '[%s](tg://user?id=%s)'
     if parse_mode:lower() == 'html' then
@@ -306,7 +308,6 @@ function tools.get_formatted_user(user_id, name, parse_mode)
     end
     return string.format(user_id_string, tools.escape_markdown(name), user_id)
 end
-
 
 tools.random_string_charset = {}
 
@@ -330,7 +331,8 @@ function tools.random_string(length, amount)
     if amount and tonumber(amount) ~= nil then
         local output = {}
         for _ = 1, tonumber(amount) do
-            local value = tools.random_string(length - 1) .. tools.random_string_charset[math.random(1, #tools.random_string_charset)]
+            local value = tools.random_string(length - 1) ..
+                              tools.random_string_charset[math.random(1, #tools.random_string_charset)]
             table.insert(output, value)
         end
         return output
@@ -381,7 +383,7 @@ function tools.table_random(tab, seed)
     if seed and tonumber(seed) ~= nil then
         math.randomseed(seed)
     end
-    tab = type(tab) == 'table' and tab or { tostring(tab) }
+    tab = type(tab) == 'table' and tab or {tostring(tab)}
     local total = 0
     for _, chance in pairs(tab) do
         total = total + chance
@@ -440,7 +442,9 @@ function tools.service_message(message)
 end
 
 function tools.is_media(message)
-    if message.audio or message.document or message.game or message.photo or message.sticker or message.video or message.voice or message.video_note or message.contact or message.location or message.venue or message.invoice or message.poll or message.dice then
+    if message.audio or message.document or message.game or message.photo or message.sticker or message.video or
+        message.voice or message.video_note or message.contact or message.location or message.venue or message.invoice or
+        message.poll or message.dice then
         return true
     end
     return false
@@ -478,7 +482,8 @@ function tools.media_type(message)
     elseif message.poll then
         return 'poll'
     elseif message.text then
-        return (message.text:match('[\216-\219][\128-\191]') or message.text:match(utf8.char(0x202e)) or message.text:match(utf8.char(0x200f))) and 'rtl' or 'text'
+        return (message.text:match('[\216-\219][\128-\191]') or message.text:match(utf8.char(0x202e)) or
+                   message.text:match(utf8.char(0x200f))) and 'rtl' or 'text'
     end
     return ''
 end
@@ -551,7 +556,8 @@ function tools.is_valid_url(original_url, parts, any)
         original_url = 'http://' .. original_url
     end
     -- Thanks to https://stackoverflow.com/questions/23590304/finding-a-url-in-a-string-lua-pattern
-    local url, protocol, subdomain, tld, colon, port, slash, path = string.match(original_url, '^(([%w_.~!*:@&+$/?%%#-]-)(%w[-.%w]*%.)(%w+)(:?)(%d*)(/?)([%w_.~!*:@&+$/?%%#=-]*))$')
+    local url, protocol, subdomain, tld, colon, port, slash, path = string.match(original_url,
+        '^(([%w_.~!*:@&+$/?%%#-]-)(%w[-.%w]*%.)(%w+)(:?)(%d*)(/?)([%w_.~!*:@&+$/?%%#=-]*))$')
     if parts then
         return {
             ['url'] = url,
@@ -593,7 +599,7 @@ end
 function tools.rle_encode(s)
     local new, count = '', 0
     for i = 1, #s do
-        local current = s:sub(i,i)
+        local current = s:sub(i, i)
         if current == string.char(0) then
             count = count + 1
         else
@@ -617,7 +623,7 @@ function tools.rle_decode(input)
             new = new .. string.rep(last, string.byte(current))
             last = ''
         else
-            new =  new .. last
+            new = new .. last
             last = current
         end
     end
@@ -737,6 +743,14 @@ function tools.split_string(str, reverse)
         end
     end
     return tab
+end
+
+function tools.string_array_to_table(string_array)
+    local table_array = {}
+    for part in string_array:gmatch('([^,]+),?') do
+        table.insert(table_array, part)
+    end
+    return table_array
 end
 
 return tools

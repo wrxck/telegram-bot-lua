@@ -8,28 +8,13 @@ local json = require('dkjson')
 
 function api.on_message(message)
     if message.text then
-        api.send_message(
-            message,
-            message.text,
-            nil,
-            true,
-            false,
-            nil,
-            api.inline_keyboard():row(
-                api.row():callback_data_button(
-                    'Button',
-                    'callback_data'
-                )
-            )
-        )
+        api.send_message(message, message.text, nil, nil, nil, nil, false, false, nil,
+            api.inline_keyboard():row(api.row():callback_data_button('Button', 'callback_data')))
     end
 end
 
 function api.on_callback_query(callback_query)
-    api.answer_callback_query(
-        callback_query.id,
-        json.encode(callback_query.from)
-    )
+    api.answer_callback_query(callback_query.id, json.encode(callback_query.from))
 end
 
 api.run()
