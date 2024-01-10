@@ -72,7 +72,7 @@ function ipsw.get_model_keyboard(device)
         total = total + 1
     end
     local count = 0
-    local rows = math.floor(total / 10)
+    local rows = math.floor(total / 20)
     if rows ~= total then
         rows = rows + 1
     end
@@ -85,7 +85,7 @@ function ipsw.get_model_keyboard(device)
                 table.insert(keyboard.inline_keyboard, {})
             end
             table.insert(keyboard.inline_keyboard[row], {
-                ['text'] = v.name,
+                ['text'] = v.name:match('^.- (.-)$'),
                 ['callback_data'] = 'model:' .. device .. ':' .. k
             })
         end
@@ -106,7 +106,10 @@ function ipsw.get_firmware_keyboard(device, model)
         total = total + 1
     end
     local count = 0
-    local rows = math.floor(total / 7)
+    local rows = math.floor(total / 12)
+    if device:lower() == 'ipad' then
+      rows = math.floor(total / 18)
+    end
     if rows ~= total then
         rows = rows + 1
     end
@@ -135,22 +138,22 @@ function api.on_callback_query(callback_query)
     if callback_query.data == 'back' then
         return api.edit_message_text(message.chat.id, message.message_id,
             'This tool was created by @wrxck, and makes use of the IPSW.me API.\nBefore we begin, please select your device type:',
-            nil, true,
+            nil, nil, nil,
             api.inline_keyboard():row(
                 api.row():callback_data_button('iPod Touch', 'device:iPod'):callback_data_button('iPhone',
-                    'device:iPhone')):row(api.row():callback_data_button('iPad', 'device:iPad'):callback_data_button(
-                'Apple TV', 'device:Apple TV')))
+                    'device:iPhone'):callback_data_button('iPad', 'device:iPad')):row(api.row():callback_data_button(
+                      'Apple TV', 'device:Apple TV'):callback_data_button(
+                        'Mac', 'device:Mac')))
     elseif callback_query.data:match('^back:') then
         callback_query.data = callback_query.data:match('^back:(.-)$')
     end
     if callback_query.data:match('^device:.-$') then
         callback_query.data = callback_query.data:match('^device:(.-)$')
-        return api.edit_message_text(message.chat.id, message.message_id, 'Please select your model:', nil, true,
+        return api.edit_message_text(message.chat.id, message.message_id, 'Please select your model:', nil, nil, nil,
             ipsw.get_model_keyboard(callback_query.data))
     elseif callback_query.data:match('^model:.-:.-$') then
         local device, model = callback_query.data:match('^model:(.-):(.-)$')
-        return api.edit_message_text(message.chat.id, message.message_id, 'Please select your firmware version:', nil,
-            true, ipsw.get_firmware_keyboard(device, model))
+        return api.edit_message_text(message.chat.id, message.message_id, 'Please select your firmware version:', nil, nil, nil, ipsw.get_firmware_keyboard(device, model))
     elseif callback_query.data:match('^firmware:.-:.-:.-$') then
         local device, model, firmware = callback_query.data:match('^firmware:(.-):(.-):(.-)$')
         firmware = model .. ' ' .. firmware
@@ -160,7 +163,7 @@ function api.on_callback_query(callback_query)
             jdat[1].device, jdat[1].version, jdat[1].uploaddate:match('^(.-)T'), jdat[1].uploaddate:match('T(.-)Z$'),
             jdat[1].md5sum, jdat[1].sha1sum, tools.round(jdat[1].size / 1000000000, 2),
             jdat[1].signed == false and utf8.char(10060) or utf8.char(9989),
-            jdat[1].signed == false and 'no longer' or 'still'), 'html', false, nil,
+            jdat[1].signed == false and 'no longer' or 'still'), 'html', nil, nil,
             api.inline_keyboard():row(api.row():url_button(jdat[1].filename, jdat[1].url)):row(
                 api.row():callback_data_button(tools.symbols.back .. ' Back', 'back:model:' .. device .. ':' .. model)))
     end
@@ -170,7 +173,7 @@ function api.on_message(message)
     ipsw.init()
     return api.send_message(message.chat.id,
         'This tool was created by @wrxck, and makes use of the IPSW.me API.\nBefore we begin, please select your device type:',
-        nil, true, false, nil,
+        nil, 'html', nil, nil, false, false, nil,
         api.inline_keyboard():row(
             api.row():callback_data_button('iPod Touch', 'device:iPod'):callback_data_button('iPhone', 'device:iPhone')
                 :callback_data_button('iPad', 'device:iPad')):row(
