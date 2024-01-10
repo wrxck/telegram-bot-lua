@@ -38,8 +38,7 @@
 -- THE SOFTWARE.
 
 local b64url = {}
-local bit32 = bit32 or bit or require('bit')
-assert(bit32, 'You don\'t have a valid bitwise library installed!')
+assert(bit32, 'telegram-bot-lua will only run on Lua 5.3+')
 
 --- octet -> char encoding.
 local encodable = {
