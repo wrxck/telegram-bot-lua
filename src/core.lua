@@ -9,13 +9,11 @@
                        __/ |
                       |___/
 
-      Version 2.0 RC1
+      Version 2.0-0
       Copyright (c) 2017-2024 Matthew Hesketh
       See LICENSE for details
 
-]]
-
-local api = {}
+]] local api = {}
 local https = require('ssl.https')
 local multipart = require('multipart-post')
 local ltn12 = require('ltn12')

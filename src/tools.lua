@@ -9,13 +9,11 @@
                        __/ |
                       |___/
 
-      Version 2.0 RC1
+      Version 2.0-0
       Copyright (c) 2017-2024 Matthew Hesketh
       See LICENSE for details
 
-]]
-
-local tools = {}
+]] local tools = {}
 local api = require('telegram-bot-lua.core')
 local https = require('ssl.https')
 local http = require('socket.http')
