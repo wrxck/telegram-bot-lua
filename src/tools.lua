@@ -9,12 +9,12 @@
                        __/ |
                       |___/
 
-      Version 2.0-0
-      Copyright (c) 2017-2024 Matthew Hesketh
+      Version 3.0-0
+      Copyright (c) 2017-2026 Matthew Hesketh
       See LICENSE for details
 
 ]] local tools = {}
-local api = require('telegram-bot-lua.core')
+local api = require('telegram-bot-lua')
 local https = require('ssl.https')
 local http = require('socket.http')
 local socket = require('socket')
@@ -260,11 +260,11 @@ function tools.get_file_as_table(path)
     if not path or not tools.file_exists(path) then
         return {}
     end
-    local file = {}
-    for line in io.lines(file) do
-        file[#file + 1] = line
+    local lines = {}
+    for line in io.lines(path) do
+        lines[#lines + 1] = line
     end
-    return file
+    return lines
 end
 
 function tools.read_file(path)
@@ -395,21 +395,6 @@ function tools.table_random(tab, seed)
     end
 end
 
-function tools.get_word(str, i)
-    if not str then
-        return false
-    end
-    local n = 1
-    for word in str:gmatch('%g+') do
-        i = i or 1
-        if n == i then
-            return word
-        end
-        n = n + 1
-    end
-    return false
-end
-
 function tools.service_message(message)
     if message.new_chat_member then
         return true, 'new_chat_member'
@@ -435,14 +420,58 @@ function tools.service_message(message)
         return true, 'pinned_message'
     elseif message.successful_payment then
         return true, 'successful_payment'
+    elseif message.forum_topic_created then
+        return true, 'forum_topic_created'
+    elseif message.forum_topic_edited then
+        return true, 'forum_topic_edited'
+    elseif message.forum_topic_closed then
+        return true, 'forum_topic_closed'
+    elseif message.forum_topic_reopened then
+        return true, 'forum_topic_reopened'
+    elseif message.general_forum_topic_hidden then
+        return true, 'general_forum_topic_hidden'
+    elseif message.general_forum_topic_unhidden then
+        return true, 'general_forum_topic_unhidden'
+    elseif message.video_chat_scheduled then
+        return true, 'video_chat_scheduled'
+    elseif message.video_chat_started then
+        return true, 'video_chat_started'
+    elseif message.video_chat_ended then
+        return true, 'video_chat_ended'
+    elseif message.video_chat_participants_invited then
+        return true, 'video_chat_participants_invited'
+    elseif message.web_app_data then
+        return true, 'web_app_data'
+    elseif message.write_access_allowed then
+        return true, 'write_access_allowed'
+    elseif message.proximity_alert_triggered then
+        return true, 'proximity_alert_triggered'
+    elseif message.users_shared then
+        return true, 'users_shared'
+    elseif message.chat_shared then
+        return true, 'chat_shared'
+    elseif message.giveaway_created then
+        return true, 'giveaway_created'
+    elseif message.giveaway then
+        return true, 'giveaway'
+    elseif message.giveaway_winners then
+        return true, 'giveaway_winners'
+    elseif message.giveaway_completed then
+        return true, 'giveaway_completed'
+    elseif message.boost_added then
+        return true, 'boost_added'
+    elseif message.chat_background_set then
+        return true, 'chat_background_set'
+    elseif message.paid_media_purchased then
+        return true, 'paid_media_purchased'
     end
     return false
 end
 
 function tools.is_media(message)
     if message.audio or message.document or message.game or message.photo or message.sticker or message.video or
-        message.voice or message.video_note or message.contact or message.location or message.venue or message.invoice or
-        message.poll or message.dice then
+        message.animation or message.voice or message.video_note or message.contact or message.location or
+        message.venue or message.invoice or message.poll or message.dice or message.paid_media then
         return true
     end
     return false
@@ -461,6 +490,8 @@ function tools.media_type(message)
         return 'sticker'
     elseif message.video then
         return 'video'
+    elseif message.animation then
+        return 'animation'
     elseif message.voice then
         return 'voice'
     elseif message.video_note then
@@ -473,6 +504,8 @@ function tools.media_type(message)
         return 'venue'
     elseif message.invoice then
         return 'invoice'
+    elseif message.paid_media then
+        return 'paid_media'
     elseif message.forward_from or message.forward_from_chat then
         return 'forwarded'
     elseif message.dice then
@@ -512,6 +545,11 @@ function tools.file_id(message, unique)
             return message.voice.file_unique_id
         end
         return message.voice.file_id
+    elseif message.animation then
+        if unique then
+            return message.animation.file_unique_id
+        end
+        return message.animation.file_id
     elseif message.video_note then
         if unique then
             return message.video_note.file_unique_id
