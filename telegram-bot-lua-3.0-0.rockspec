@@ -19,12 +19,13 @@ supported_platforms = {
     "bsd"
 }
 dependencies = {
-    "lua >= 5.3",
+    "lua >= 5.1",
     "dkjson >= 2.5-2",
     "luasec >= 0.6-1",
     "luasocket >= 3.0rc1-2",
     "multipart-post >= 1.1-1",
-    "luautf8 >= 0.1.1-1"
+    "luautf8 >= 0.1.1-1",
+    "copas >= 4.0"
 }
 build = {
     type = "builtin",
@@ -38,6 +39,8 @@ build = {
         ["telegram-bot-lua.utils"] = "src/utils.lua",
         ["telegram-bot-lua.compat"] = "src/compat.lua",
         ["telegram-bot-lua.core"] = "src/core.lua",
+        ["telegram-bot-lua.polyfill"] = "src/polyfill.lua",
+        ["telegram-bot-lua.async"] = "src/async.lua",
         ["telegram-bot-lua.b64url"] = "src/b64url.lua",
         ["telegram-bot-lua.methods.updates"] = "src/methods/updates.lua",
         ["telegram-bot-lua.methods.messages"] = "src/methods/messages.lua",

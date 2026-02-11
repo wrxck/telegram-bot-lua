@@ -4,7 +4,7 @@ A feature-filled Telegram bot API library written in Lua, created by [Matt](http
 
 ## Installation
 
-Requires Lua 5.3+ and LuaRocks:
+Requires Lua 5.1+ and LuaRocks:
 
 ```
 luarocks install telegram-bot-lua
@@ -31,6 +31,8 @@ api.run({ timeout = 60 })
 ## Key Features
 
 - Full Bot API 9.4 coverage (messages, media, payments, stickers, forums, games, gifts, stories, and more)
+- **Lua 5.1 - 5.5 support** with automatic polyfills for bitwise operations and string.pack
+- **Async concurrency** via copas: concurrent update processing, parallel API calls, background tasks
 - Clean opts-table pattern for all API methods
 - Chainable keyboard and inline result builders
 - Text formatting helpers for HTML, Markdown, and MarkdownV2
@@ -47,6 +49,7 @@ api.run({ timeout = 60 })
 | [API Methods](docs/methods.md) | Complete method reference |
 | [Builders](docs/builders.md) | Keyboards, inline results, and type constructors |
 | [Utilities](docs/utilities.md) | Formatting, command parsing, pagination, and tools |
+| [Async / Concurrency](docs/async.md) | Concurrent updates, parallel calls, background tasks |
 | [Migration from v2](docs/migration.md) | Breaking changes and upgrade guide |
 
 ## Example
@@ -92,6 +95,8 @@ api.run({ timeout = 60 })
 src/
   init.lua              -- Entry point, core HTTP, module loader
   config.lua            -- API endpoint configuration
+  polyfill.lua          -- Lua 5.1+ compatibility (bit ops, string.pack)
+  async.lua             -- Copas-based concurrency module
   b64url.lua            -- Base64 URL encoding/decoding
   tools.lua             -- Utility functions (formatting, file ops, etc.)
   handlers.lua          -- Update routing and on_* handler stubs

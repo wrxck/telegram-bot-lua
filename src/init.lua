@@ -142,6 +142,7 @@ require('telegram-bot-lua.methods.checklists')(api)
 require('telegram-bot-lua.methods.stories')(api)
 require('telegram-bot-lua.methods.suggested_posts')(api)
 require('telegram-bot-lua.utils')(api)
+require('telegram-bot-lua.async')(api)
 require('telegram-bot-lua.compat')(api)
 
 return api

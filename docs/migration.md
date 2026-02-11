@@ -97,4 +97,6 @@ These bugs from v2 are fixed in v3:
 
 ## New Features
 
-See [Utilities](utilities.md) for new helper functions including text formatting, command parsing, pagination, deep links, and callback data encoding.
+- **Lua 5.1+ support**: v3 supports Lua 5.1, 5.2, 5.3, 5.4, and 5.5 via a polyfill module. Lua 5.3+ native features (bitwise operators, string.pack) are used when available with automatic fallbacks.
+- **Async / Concurrency**: `api.async.run()` processes updates concurrently. `api.async.all()` runs parallel operations. See [Async](async.md).
+- **Utilities**: Text formatting, command parsing, pagination, deep links, and callback data encoding. See [Utilities](utilities.md).

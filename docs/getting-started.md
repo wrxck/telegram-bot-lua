@@ -2,7 +2,7 @@
 
 ## Installation
 
-Requires Lua 5.3+ and LuaRocks:
+Requires Lua 5.1+ and LuaRocks:
 
 ```
 luarocks install telegram-bot-lua
@@ -114,4 +114,5 @@ local result, extra, err = api.safe_call(api.send_message, chat_id, text)
 - [API Methods Reference](methods.md) - All available API methods
 - [Builders](builders.md) - Keyboards, inline results, and constructors
 - [Utilities](utilities.md) - Helper functions and formatting
+- [Async / Concurrency](async.md) - Concurrent update processing and parallel operations
 - [Migration from v2](migration.md) - Upgrading from v2
