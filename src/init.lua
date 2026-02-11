@@ -28,11 +28,22 @@ function api.configure(token, debug)
     end
     api.debug = debug and true or false
     api.token = assert(token, 'Please specify your bot API token you received from @BotFather!')
-    repeat
+    local max_retries = 5
+    for i = 1, max_retries do
         api.info = api.get_me()
-    until api.info.result
-    api.info = api.info.result
-    api.info.name = api.info.first_name
+        if api.info and api.info.result then
+            break
+        end
+        if i == max_retries then
+            error('Failed to connect to Telegram API after ' .. max_retries .. ' attempts. Check your token and network.')
+        end
+        if _G._TEST then break end
+        os.execute('sleep 1')
+    end
+    if api.info and api.info.result then
+        api.info = api.info.result
+        api.info.name = api.info.first_name
+    end
     return api
 end
 
@@ -43,20 +54,24 @@ function api.request(endpoint, parameters, file)
         parameters[k] = tostring(v)
     end
     if api.debug then
-        local output = json.encode(parameters, {
-            ['indent'] = true
-        })
+        local safe = {}
+        for k, v in pairs(parameters) do safe[k] = v end
+        local output = json.encode(safe, { ['indent'] = true })
         print(output)
     end
     if file and next(file) ~= nil then
         local file_type, file_name = next(file)
-        local file_res = io.open(file_name, 'r')
-        if file_res then
-            parameters[file_type] = {
-                filename = file_name,
-                data = file_res:read('*a')
-            }
-            file_res:close()
+        if type(file_name) == 'string' then
+            local file_res = io.open(file_name, 'rb')
+            if file_res then
+                parameters[file_type] = {
+                    filename = file_name,
+                    data = file_res:read('*a')
+                }
+                file_res:close()
+            else
+                parameters[file_type] = file_name
+            end
         else
             parameters[file_type] = file_name
         end
@@ -75,7 +90,7 @@ function api.request(endpoint, parameters, file)
         ['sink'] = ltn12.sink.table(response)
     })
     if not success then
-        print('Connection error [' .. res .. ']')
+        print('Connection error [' .. tostring(res) .. ']')
         return false, res
     end
     local jstr = table.concat(response)
@@ -83,11 +98,10 @@ function api.request(endpoint, parameters, file)
     if not jdat then
         return false, res
     elseif not jdat.ok then
-        local output = '\n' .. jdat.description .. ' [' .. jdat.error_code .. ']\n\nPayload: '
-        output = output .. json.encode(parameters, {
-            ['indent'] = true
-        }) .. '\n'
-        print(output)
+        if api.debug then
+            local output = '\n' .. tostring(jdat.description) .. ' [' .. tostring(jdat.error_code) .. ']\n'
+            print(output)
+        end
         return false, jdat
     end
     return jdat, res
@@ -127,5 +141,7 @@ require('telegram-bot-lua.methods.gifts')(api)
 require('telegram-bot-lua.methods.checklists')(api)
 require('telegram-bot-lua.methods.stories')(api)
 require('telegram-bot-lua.methods.suggested_posts')(api)
+require('telegram-bot-lua.utils')(api)
+require('telegram-bot-lua.compat')(api)
 
 return api

@@ -1,0 +1,363 @@
+local api = require('spec.test_helper')
+
+describe('utils', function()
+    before_each(function()
+        api._clear_requests()
+    end)
+
+    describe('fmt', function()
+        it('bold HTML', function()
+            assert.equals('<b>hello</b>', api.fmt.bold('hello', 'HTML'))
+        end)
+
+        it('bold MarkdownV2', function()
+            assert.equals('*hello*', api.fmt.bold('hello', 'MarkdownV2'))
+        end)
+
+        it('bold defaults to HTML', function()
+            assert.equals('<b>test</b>', api.fmt.bold('test'))
+        end)
+
+        it('italic HTML', function()
+            assert.equals('<i>hello</i>', api.fmt.italic('hello', 'HTML'))
+        end)
+
+        it('code HTML', function()
+            assert.equals('<code>x &amp; y</code>', api.fmt.code('x & y', 'HTML'))
+        end)
+
+        it('code markdown', function()
+            assert.equals('`code`', api.fmt.code('code', 'MarkdownV2'))
+        end)
+
+        it('pre HTML with language', function()
+            local result = api.fmt.pre('print("hi")', 'lua', 'HTML')
+            assert.truthy(result:find('language%-lua'))
+            assert.truthy(result:find('<pre>'))
+        end)
+
+        it('pre markdown', function()
+            local result = api.fmt.pre('code', 'lua', 'MarkdownV2')
+            assert.truthy(result:find('```lua'))
+        end)
+
+        it('link delegates to tools.create_link', function()
+            local result = api.fmt.link('Click', 'https://example.com', 'HTML')
+            assert.truthy(result:find('<a href'))
+        end)
+
+        it('spoiler HTML', function()
+            assert.equals('<tg-spoiler>secret</tg-spoiler>', api.fmt.spoiler('secret', 'HTML'))
+        end)
+
+        it('spoiler MarkdownV2', function()
+            assert.equals('||secret||', api.fmt.spoiler('secret', 'MarkdownV2'))
+        end)
+
+        it('strikethrough HTML', function()
+            assert.equals('<s>old</s>', api.fmt.strikethrough('old', 'HTML'))
+        end)
+
+        it('underline HTML', function()
+            assert.equals('<u>text</u>', api.fmt.underline('text', 'HTML'))
+        end)
+
+        it('blockquote HTML', function()
+            assert.equals('<blockquote>quote</blockquote>', api.fmt.blockquote('quote', 'HTML'))
+        end)
+
+        it('blockquote MarkdownV2 adds > prefix', function()
+            local result = api.fmt.blockquote('line1\nline2', 'MarkdownV2')
+            assert.truthy(result:find('>line1'))
+            assert.truthy(result:find('>line2'))
+        end)
+
+        it('escapes HTML entities in bold', function()
+            assert.equals('<b>&lt;script&gt;</b>', api.fmt.bold('<script>', 'HTML'))
+        end)
+    end)
+
+    describe('extract_command', function()
+        it('returns false for non-table', function()
+            assert.is_false(api.extract_command('string'))
+        end)
+
+        it('returns false for no text', function()
+            assert.is_false(api.extract_command({ photo = {} }))
+        end)
+
+        it('extracts simple command', function()
+            local cmd = api.extract_command({ text = '/start' })
+            assert.equals('start', cmd.command)
+            assert.equals(0, #cmd.args)
+            assert.is_nil(cmd.bot)
+        end)
+
+        it('extracts command with bot username', function()
+            local cmd = api.extract_command({ text = '/help@mybot' })
+            assert.equals('help', cmd.command)
+            assert.equals('mybot', cmd.bot)
+        end)
+
+        it('extracts command with args', function()
+            local cmd = api.extract_command({ text = '/ban 123 reason here' })
+            assert.equals('ban', cmd.command)
+            assert.equals(3, #cmd.args)
+            assert.equals('123', cmd.args[1])
+            assert.equals('123 reason here', cmd.args_str)
+        end)
+
+        it('extracts from caption', function()
+            local cmd = api.extract_command({ caption = '/tag photo' })
+            assert.equals('tag', cmd.command)
+        end)
+
+        it('lowercases command', function()
+            local cmd = api.extract_command({ text = '/START' })
+            assert.equals('start', cmd.command)
+        end)
+
+        it('supports ! and # prefixes', function()
+            assert.equals('help', api.extract_command({ text = '!help' }).command)
+            assert.equals('help', api.extract_command({ text = '#help' }).command)
+        end)
+
+        it('returns false for non-command text', function()
+            assert.is_false(api.extract_command({ text = 'hello world' }))
+        end)
+    end)
+
+    describe('get_text', function()
+        it('returns text from message', function()
+            assert.equals('hello', api.get_text({ text = 'hello' }))
+        end)
+
+        it('returns caption from media', function()
+            assert.equals('cap', api.get_text({ caption = 'cap', photo = {} }))
+        end)
+
+        it('returns nil for non-table', function()
+            assert.is_nil(api.get_text('not a table'))
+        end)
+
+        it('returns nil for no text or caption', function()
+            assert.is_nil(api.get_text({ sticker = {} }))
+        end)
+    end)
+
+    describe('get_user_id', function()
+        it('from message.from', function()
+            assert.equals(123, api.get_user_id({ from = { id = 123 } }))
+        end)
+
+        it('from callback_query.message.from', function()
+            assert.equals(456, api.get_user_id({ message = { from = { id = 456 } } }))
+        end)
+
+        it('returns nil for non-table', function()
+            assert.is_nil(api.get_user_id(nil))
+        end)
+    end)
+
+    describe('get_chat_id', function()
+        it('from message.chat', function()
+            assert.equals(-100, api.get_chat_id({ chat = { id = -100 } }))
+        end)
+
+        it('from nested message', function()
+            assert.equals(42, api.get_chat_id({ message = { chat = { id = 42 } } }))
+        end)
+    end)
+
+    describe('deep_link', function()
+        it('generates start link', function()
+            assert.equals('https://t.me/mybot?start=abc', api.deep_link('mybot', 'abc'))
+        end)
+
+        it('generates startgroup link', function()
+            assert.equals('https://t.me/mybot?startgroup=xyz', api.deep_link_group('mybot', 'xyz'))
+        end)
+    end)
+
+    describe('parse_deep_link', function()
+        it('extracts payload from /start', function()
+            assert.equals('ref123', api.parse_deep_link({ text = '/start ref123' }))
+        end)
+
+        it('returns nil for plain /start', function()
+            assert.is_nil(api.parse_deep_link({ text = '/start' }))
+        end)
+
+        it('returns nil for non-table', function()
+            assert.is_nil(api.parse_deep_link(nil))
+        end)
+    end)
+
+    describe('paginate', function()
+        it('returns first page of items', function()
+            local items = {'a', 'b', 'c', 'd', 'e', 'f', 'g'}
+            local result = api.paginate(items, 1, 3)
+            assert.equals(3, #result.items)
+            assert.equals('a', result.items[1])
+            assert.equals(1, result.page)
+            assert.equals(3, result.total_pages)
+            assert.is_false(result.has_prev)
+            assert.is_true(result.has_next)
+        end)
+
+        it('returns middle page', function()
+            local items = {'a', 'b', 'c', 'd', 'e', 'f'}
+            local result = api.paginate(items, 2, 2)
+            assert.equals(2, #result.items)
+            assert.equals('c', result.items[1])
+            assert.is_true(result.has_prev)
+            assert.is_true(result.has_next)
+        end)
+
+        it('returns last page', function()
+            local items = {'a', 'b', 'c', 'd', 'e'}
+            local result = api.paginate(items, 2, 3)
+            assert.equals(2, #result.items)
+            assert.equals('d', result.items[1])
+            assert.is_false(result.has_next)
+        end)
+
+        it('clamps page to valid range', function()
+            local items = {'a', 'b'}
+            assert.equals(1, api.paginate(items, 0, 5).page)
+            assert.equals(1, api.paginate(items, 99, 5).page)
+        end)
+
+        it('handles empty items', function()
+            local result = api.paginate({}, 1, 5)
+            assert.equals(0, #result.items)
+            assert.equals(1, result.total_pages)
+        end)
+
+        it('nav_row is a row object', function()
+            local result = api.paginate({'a', 'b', 'c'}, 1, 2)
+            assert.is_table(result.nav_row)
+        end)
+    end)
+
+    describe('parse_page_callback', function()
+        it('parses page number', function()
+            assert.equals(3, api.parse_page_callback('page:3'))
+        end)
+
+        it('returns nil for non-matching', function()
+            assert.is_nil(api.parse_page_callback('other:3'))
+        end)
+
+        it('supports custom prefix', function()
+            assert.equals(5, api.parse_page_callback('items:5', 'items'))
+        end)
+
+        it('returns nil for current marker', function()
+            assert.is_nil(api.parse_page_callback('page:current'))
+        end)
+    end)
+
+    describe('safe_call', function()
+        it('returns result on success', function()
+            local result = api.safe_call(function() return 42 end)
+            assert.equals(42, result)
+        end)
+
+        it('returns false and error on failure', function()
+            local result, _, err = api.safe_call(function() error('boom') end)
+            assert.is_false(result)
+            assert.truthy(err:find('boom'))
+        end)
+    end)
+
+    describe('send_typing', function()
+        it('sends typing action', function()
+            api.send_typing(123)
+            local req = api._last_request()
+            assert.truthy(req.endpoint:find('/sendChatAction'))
+            assert.equals('typing', req.parameters.action)
+        end)
+    end)
+
+    describe('is_command', function()
+        it('returns true for commands', function()
+            assert.is_true(api.is_command({ text = '/start' }))
+            assert.is_true(api.is_command({ text = '!help' }))
+            assert.is_true(api.is_command({ text = '#tag stuff' }))
+        end)
+
+        it('returns false for non-commands', function()
+            assert.is_false(api.is_command({ text = 'hello' }))
+            assert.is_false(api.is_command({ photo = {} }))
+            assert.is_false(api.is_command('string'))
+        end)
+    end)
+
+    describe('is_reply', function()
+        it('returns true when reply_to_message exists', function()
+            assert.is_true(api.is_reply({ reply_to_message = { message_id = 1 } }))
+        end)
+
+        it('returns false otherwise', function()
+            assert.is_false(api.is_reply({ text = 'hello' }))
+        end)
+    end)
+
+    describe('is_private / is_group', function()
+        it('detects private chat', function()
+            assert.is_true(api.is_private({ chat = { type = 'private' } }))
+            assert.is_false(api.is_group({ chat = { type = 'private' } }))
+        end)
+
+        it('detects group chat', function()
+            assert.is_true(api.is_group({ chat = { type = 'group' } }))
+            assert.is_true(api.is_group({ chat = { type = 'supergroup' } }))
+            assert.is_false(api.is_private({ chat = { type = 'group' } }))
+        end)
+    end)
+
+    describe('get_name', function()
+        it('returns full name', function()
+            assert.equals('John Doe', api.get_name({ first_name = 'John', last_name = 'Doe' }))
+        end)
+
+        it('returns first name only', function()
+            assert.equals('John', api.get_name({ first_name = 'John' }))
+        end)
+
+        it('returns Unknown for non-table', function()
+            assert.equals('Unknown', api.get_name(nil))
+        end)
+    end)
+
+    describe('encode_callback / decode_callback', function()
+        it('encodes action only', function()
+            assert.equals('click', api.encode_callback('click', nil))
+        end)
+
+        it('encodes action with data', function()
+            local result = api.encode_callback('ban', { id = 123 })
+            assert.truthy(result:find('ban:'))
+            assert.truthy(result:find('id=123'))
+        end)
+
+        it('decodes action only', function()
+            local result = api.decode_callback('click')
+            assert.equals('click', result.action)
+            assert.equals(0, #result.data)
+        end)
+
+        it('roundtrips encode/decode', function()
+            local encoded = api.encode_callback('action', { user = 42, mode = 'test' })
+            local decoded = api.decode_callback(encoded)
+            assert.equals('action', decoded.action)
+            assert.equals(42, decoded.data.user)
+            assert.equals('test', decoded.data.mode)
+        end)
+
+        it('decode returns nil for non-string', function()
+            assert.is_nil(api.decode_callback(nil))
+        end)
+    end)
+end)

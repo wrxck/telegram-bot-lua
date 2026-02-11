@@ -44,7 +44,7 @@ return function(api)
         parse_mode = (type(parse_mode) == 'boolean' and parse_mode == true) and 'markdown' or parse_mode
         local reply_parameters = opts.reply_parameters
         if not reply_parameters then
-            reply_parameters = api.reply_parameters(message.message_id, message.chat.id, true, nil, parse_mode, nil, nil)
+            reply_parameters = api.reply_parameters(message.message_id, message.chat.id, true)
         end
         reply_parameters = type(reply_parameters) == 'table' and json.encode(reply_parameters) or reply_parameters
         local entities = opts.entities

@@ -35,9 +35,10 @@ return function(api)
     function api.on_purchased_paid_media(_) end
 
     function api.process_update(update)
-        if update then
-            api.on_update(update)
+        if not update then
+            return false
         end
+        api.on_update(update)
         if update.message then
             if update.message.chat.type == 'private' then
                 api.on_private_message(update.message)
