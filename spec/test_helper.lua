@@ -33,6 +33,11 @@ local module_map = {
     ['telegram-bot-lua.methods.checklists'] = 'src/methods/checklists.lua',
     ['telegram-bot-lua.methods.stories'] = 'src/methods/stories.lua',
     ['telegram-bot-lua.methods.suggested_posts'] = 'src/methods/suggested_posts.lua',
+    ['telegram-bot-lua.adapters'] = 'src/adapters/init.lua',
+    ['telegram-bot-lua.adapters.db'] = 'src/adapters/db.lua',
+    ['telegram-bot-lua.adapters.redis'] = 'src/adapters/redis.lua',
+    ['telegram-bot-lua.adapters.llm'] = 'src/adapters/llm.lua',
+    ['telegram-bot-lua.adapters.email'] = 'src/adapters/email.lua',
 }
 
 for mod_name, file_path in pairs(module_map) do

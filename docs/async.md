@@ -1,10 +1,10 @@
 # Async / Concurrency
 
-telegram-bot-lua v3.0 includes a coroutine-based concurrency module powered by [copas](https://github.com/lunarmodules/copas). This enables non-blocking update processing, parallel API calls, and background tasks.
+telegram-bot-lua v3.0 is async-first. The framework uses coroutine-based concurrency powered by [copas](https://github.com/lunarmodules/copas), enabling non-blocking update processing, parallel API calls, and background tasks out of the box.
 
-## Concurrent Update Processing
+## Async by Default
 
-Use `api.async.run()` instead of `api.run()` to process updates concurrently. Each update is dispatched in its own coroutine, so a slow handler won't block others.
+`api.run()` uses async concurrency by default. Each update is dispatched in its own coroutine, so a slow handler won't block others. All API calls automatically use non-blocking HTTP.
 
 ```lua
 local api = require('telegram-bot-lua').configure('YOUR_BOT_TOKEN')
@@ -17,14 +17,16 @@ function api.on_message(message)
     api.send_message(message.chat.id, 'Done!')
 end
 
-api.async.run({
-    timeout = 60,
-    limit = 100,
-    allowed_updates = { 'message', 'callback_query' }
-})
+api.run({ timeout = 60 })
 ```
 
-Within `api.async.run()`, all API calls (e.g. `api.send_message`) automatically use non-blocking HTTP via copas.
+For single-threaded sequential processing, opt in with `sync = true`:
+
+```lua
+api.run({ sync = true, timeout = 60 })
+```
+
+`api.async.run()` is still available as an explicit alias for async mode.
 
 ## Parallel Operations
 
@@ -75,17 +77,30 @@ api.async.sleep(1.5)  -- sleep 1.5 seconds, other coroutines continue
 ## Control Functions
 
 ```lua
-api.async.stop()         -- Stop the async run loop
-api.async.is_running()   -- Returns true if inside async.run()
+api.async.stop()         -- Stop the run loop
+api.async.is_running()   -- Returns true if inside the async event loop
 ```
 
 ## Non-blocking HTTP Requests
 
-`api.async.request()` has the same signature as `api.request()` but uses copas HTTP for non-blocking I/O. During `api.async.run()`, this is used automatically for all API calls.
+`api.async.request()` has the same signature as `api.request()` but uses copas HTTP for non-blocking I/O. During `api.run()`, this is used automatically for all API calls.
 
 ```lua
 -- Manual usage (inside a copas context)
 local result, status = api.async.request(endpoint, parameters, file)
+```
+
+## Adapter Integration
+
+All built-in adapters (database, Redis, LLM, email) are async-aware. They automatically use non-blocking I/O when running inside `api.run()`:
+
+```lua
+function api.on_message(message)
+    -- These are all non-blocking inside api.run()
+    local rows = db:query('SELECT * FROM users WHERE id = ?', {message.from.id})
+    local cached = redis:get('user:' .. message.from.id)
+    local result = llm:chat({{ role = 'user', content = message.text }})
+end
 ```
 
 ## Lua Version Compatibility

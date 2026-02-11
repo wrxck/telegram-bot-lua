@@ -103,7 +103,20 @@ return function(api)
         return false
     end
 
+    -- Async-first run loop.
+    -- By default uses copas for concurrent update processing.
+    -- Pass { sync = true } for single-threaded sequential processing.
     function api.run(opts)
+        opts = opts or {}
+        if opts.sync then
+            return api._run_sync(opts)
+        end
+        -- Default: async via copas
+        return api.async.run(opts)
+    end
+
+    -- Single-threaded synchronous polling loop (opt-in via sync = true).
+    function api._run_sync(opts)
         opts = opts or {}
         local limit = tonumber(opts.limit) or 1
         local timeout = tonumber(opts.timeout) or 0

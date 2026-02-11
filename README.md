@@ -21,18 +21,17 @@ function api.on_message(message)
     end
 end
 
-function api.on_callback_query(callback_query)
-    api.answer_callback_query(callback_query.id, { text = 'Received!' })
-end
-
 api.run({ timeout = 60 })
 ```
+
+`api.run()` is async by default: each update gets its own coroutine and all API calls are non-blocking.
 
 ## Key Features
 
 - Full Bot API 9.4 coverage (messages, media, payments, stickers, forums, games, gifts, stories, and more)
+- **Async-first architecture** via copas: concurrent updates, parallel API calls, background tasks
+- **Built-in adapters**: SQLite, PostgreSQL, Redis, OpenAI, Anthropic (Claude), and SMTP email
 - **Lua 5.1 - 5.5 support** with automatic polyfills for bitwise operations and string.pack
-- **Async concurrency** via copas: concurrent update processing, parallel API calls, background tasks
 - Clean opts-table pattern for all API methods
 - Chainable keyboard and inline result builders
 - Text formatting helpers for HTML, Markdown, and MarkdownV2
@@ -50,39 +49,42 @@ api.run({ timeout = 60 })
 | [Builders](docs/builders.md) | Keyboards, inline results, and type constructors |
 | [Utilities](docs/utilities.md) | Formatting, command parsing, pagination, and tools |
 | [Async / Concurrency](docs/async.md) | Concurrent updates, parallel calls, background tasks |
+| [Adapters](docs/adapters.md) | Database, Redis, LLM, and email integrations |
 | [Migration from v2](docs/migration.md) | Breaking changes and upgrade guide |
 
 ## Example
 
 ```lua
-local api = require('telegram-bot-lua').configure('YOUR_TOKEN')
-local tools = require('telegram-bot-lua.tools')
+local api = require('telegram-bot-lua').configure(os.getenv('BOT_TOKEN'))
+
+-- Connect adapters
+local db = api.db.connect({ driver = 'sqlite', path = 'bot.db' })
+db:execute('CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY, name TEXT)')
+
+local llm = api.llm.new({
+    provider = 'anthropic',
+    api_key = os.getenv('ANTHROPIC_API_KEY'),
+    model = 'claude-sonnet-4-5-20250929',
+})
 
 function api.on_message(message)
+    if not message.text then return end
     local cmd = api.extract_command(message)
-    if not cmd then return end
 
-    if cmd.command == 'start' then
-        local payload = api.parse_deep_link(message)
+    if cmd and cmd.command == 'start' then
         local name = api.fmt.bold(api.get_name(message.from))
+        db:execute('INSERT OR IGNORE INTO users VALUES (?, ?)', {message.from.id, message.from.first_name})
         api.send_message(message.chat.id, 'Welcome, ' .. name .. '!', {
             parse_mode = 'HTML',
             reply_markup = api.inline_keyboard()
                 :row(api.row()
                     :callback_data_button('Help', 'help')
-                    :url_button('Website', 'https://example.com'))
+                    :callback_data_button('Ask AI', 'ai'))
         })
-    elseif cmd.command == 'info' then
+    elseif cmd and cmd.command == 'ask' and cmd.args_str then
         api.send_typing(message.chat.id)
-        local text = api.fmt.code(tools.pretty_print(message.from))
-        api.send_message(message.chat.id, text, { parse_mode = 'HTML' })
-    end
-end
-
-function api.on_callback_query(callback_query)
-    local parsed = api.decode_callback(callback_query.data)
-    if parsed and parsed.action == 'help' then
-        api.answer_callback_query(callback_query.id, { text = 'Use /start to begin!' })
+        local result = llm:chat({{ role = 'user', content = cmd.args_str }})
+        api.send_message(message.chat.id, result and result.content or 'Sorry, error occurred.')
     end
 end
 
@@ -99,11 +101,17 @@ src/
   async.lua             -- Copas-based concurrency module
   b64url.lua            -- Base64 URL encoding/decoding
   tools.lua             -- Utility functions (formatting, file ops, etc.)
-  handlers.lua          -- Update routing and on_* handler stubs
+  handlers.lua          -- Update routing and on_* handler stubs (async-first)
   builders.lua          -- Keyboard, inline result, and type constructors
   helpers.lua           -- Member status check helpers
   utils.lua             -- Bot development utilities (fmt, commands, pagination)
   compat.lua            -- v2 backward compatibility layer
+  adapters/
+    init.lua            -- Adapter registry and shared utilities
+    db.lua              -- Database adapter (SQLite, PostgreSQL)
+    redis.lua           -- Redis adapter (RESP protocol)
+    llm.lua             -- LLM adapter (OpenAI, Anthropic)
+    email.lua           -- Email adapter (SMTP)
   methods/
     messages.lua        -- send_*, forward_*, copy_*, edit_*, delete_*
     updates.lua         -- get_updates, webhooks

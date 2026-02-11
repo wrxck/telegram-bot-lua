@@ -48,14 +48,17 @@ api.edit_message_text(chat_id, msg_id, text, 'HTML') -- parse_mode as 4th arg
 
 The v2 names still work via the compatibility layer.
 
-### 4. `api.run()` opts table
+### 4. `api.run()` is now async-first
 
 ```lua
 -- v2
 api.run(limit, timeout, offset, allowed_updates, use_beta_endpoint)
 
--- v3
+-- v3 (async by default - each update gets its own coroutine)
 api.run({ limit = 100, timeout = 60 })
+
+-- v3 (single-threaded, like v2 behavior)
+api.run({ sync = true, limit = 100, timeout = 60 })
 ```
 
 ### 5. Constructor opts tables
@@ -97,6 +100,7 @@ These bugs from v2 are fixed in v3:
 
 ## New Features
 
+- **Async-first architecture**: `api.run()` now uses copas by default for concurrent update processing. Use `{ sync = true }` for single-threaded mode. See [Async](async.md).
+- **Built-in adapters**: Database (SQLite, PostgreSQL), Redis, LLM (OpenAI, Anthropic), and email (SMTP). All async-aware. See [Adapters](adapters.md).
 - **Lua 5.1+ support**: v3 supports Lua 5.1, 5.2, 5.3, 5.4, and 5.5 via a polyfill module. Lua 5.3+ native features (bitwise operators, string.pack) are used when available with automatic fallbacks.
-- **Async / Concurrency**: `api.async.run()` processes updates concurrently. `api.async.all()` runs parallel operations. See [Async](async.md).
 - **Utilities**: Text formatting, command parsing, pagination, deep links, and callback data encoding. See [Utilities](utilities.md).

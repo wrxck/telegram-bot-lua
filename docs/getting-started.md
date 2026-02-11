@@ -8,6 +8,13 @@ Requires Lua 5.1+ and LuaRocks:
 luarocks install telegram-bot-lua
 ```
 
+Optional adapter dependencies:
+
+```
+luarocks install lsqlite3   # SQLite database adapter
+luarocks install pgmoon      # PostgreSQL database adapter
+```
+
 ## Quick Start
 
 ```lua
@@ -19,8 +26,10 @@ function api.on_message(message)
     end
 end
 
-api.run()
+api.run({ timeout = 60 })
 ```
+
+`api.run()` is async by default: each update is processed in its own coroutine, so a slow handler won't block other updates. All API calls are non-blocking within `api.run()`.
 
 ## Configuration
 
@@ -31,12 +40,15 @@ local api = require('telegram-bot-lua').configure('YOUR_BOT_TOKEN')
 -- With debug logging
 local api = require('telegram-bot-lua').configure('YOUR_BOT_TOKEN', true)
 
--- Run with options
+-- Run with options (async by default)
 api.run({
     limit = 100,       -- Max updates per poll (1-100)
     timeout = 60,       -- Long polling timeout in seconds
     allowed_updates = { 'message', 'callback_query' }  -- Filter update types
 })
+
+-- Single-threaded mode (opt-in)
+api.run({ sync = true, timeout = 60 })
 ```
 
 ## Bot Information
@@ -115,4 +127,5 @@ local result, extra, err = api.safe_call(api.send_message, chat_id, text)
 - [Builders](builders.md) - Keyboards, inline results, and constructors
 - [Utilities](utilities.md) - Helper functions and formatting
 - [Async / Concurrency](async.md) - Concurrent update processing and parallel operations
+- [Adapters](adapters.md) - Database, Redis, LLM, and email integrations
 - [Migration from v2](migration.md) - Upgrading from v2
