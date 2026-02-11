@@ -9,19 +9,21 @@
                        __/ |
                       |___/
 
-      Version 2.0-0
-      Copyright (c) 2017-2024 Matthew Hesketh
+      Version 3.0-0
+      Copyright (c) 2017-2026 Matthew Hesketh
       See LICENSE for details
 
 ]] local tools = {}
-local api = require('telegram-bot-lua.core')
 local https = require('ssl.https')
 local http = require('socket.http')
 local socket = require('socket')
 local ltn12 = require('ltn12')
 local json = require('dkjson')
-local utf8 = utf8 or require('lua-utf8') -- Lua 5.2 compatibility.
+local utf8 = utf8 or require('lua-utf8')
 local b64url = require('telegram-bot-lua.b64url')
+local poly = require('telegram-bot-lua.polyfill')
+local band, lshift, rshift = poly.band, poly.lshift, poly.rshift
+local sunpack = poly.string_unpack
 
 function tools.comma_value(amount)
     amount = tostring(amount)
@@ -39,7 +41,7 @@ function tools.format_ms(milliseconds)
     local total_seconds = math.floor(milliseconds / 1000)
     local seconds = total_seconds % 60
     local minutes = math.floor(total_seconds / 60) % 60
-    local hours = math.floor(minutes / 60)
+    local hours = math.floor(total_seconds / 3600)
     return string.format('%02d:%02d:%02d', hours, minutes, seconds)
 end
 
@@ -47,7 +49,7 @@ function tools.format_time(seconds)
     if not seconds or tonumber(seconds) == nil then
         return false
     end
-    seconds = tonumber(seconds) -- Make sure we're handling a numerical value
+    seconds = tonumber(seconds)
     local minutes = math.floor(seconds / 60)
     if minutes == 0 then
         return seconds ~= 1 and seconds .. ' seconds' or seconds .. ' second'
@@ -82,8 +84,8 @@ function tools.round(num, idp)
     return math.floor(num + .5)
 end
 
-function tools.pretty_print(table)
-    return json.encode(table, {
+function tools.pretty_print(tbl)
+    return json.encode(tbl, {
         ['indent'] = true
     })
 end
@@ -118,12 +120,16 @@ function tools.escape_markdown(str)
     return tostring(str):gsub('_', '\\_'):gsub('%[', '\\['):gsub('*', '\\*'):gsub('`', '\\`')
 end
 
+function tools.escape_markdown_v2(str)
+    return tostring(str):gsub('([_%*%[%]%(%)~`>#+%-%=|{}.!\\])', '\\%1')
+end
+
 function tools.escape_html(str)
     return tostring(str):gsub('&', '&amp;'):gsub('<', '&lt;'):gsub('>', '&gt;')
 end
 
 function tools.escape_bash(str)
-    return tostring(str):gsub('%$', ''):gsub('%^', ''):gsub('&', ''):gsub('|', ''):gsub(';', '')
+    return "'" .. tostring(str):gsub("'", "'\\''") .. "'"
 end
 
 function tools.utf8_len(str)
@@ -138,13 +144,14 @@ function tools.utf8_len(str)
 end
 
 function tools.get_linked_name(id)
+    local api = require('telegram-bot-lua')
     local success = api.get_chat(id)
     if not success or not success.result then
         return false
     end
     local output = tools.escape_html(success.result.first_name)
     if success.result.username then
-        output = '<a href="https://t.me/' .. success.result.username .. '">' .. output .. '</a>'
+        output = '<a href="https://t.me/' .. tools.escape_html(success.result.username) .. '">' .. output .. '</a>'
     end
     return output
 end
@@ -168,15 +175,16 @@ function tools.input(s)
     if not s then
         return false
     end
-    local input = s:find(' ')
-    if not input then
+    local pos = s:find(' ')
+    if not pos then
         return false
     end
-    return s:sub(input + 1)
+    return s:sub(pos + 1)
 end
 
 function tools.trim(str)
-    return str:gsub('^%s*(.-)%s*$', '%1')
+    local result = str:gsub('^%s*(.-)%s*$', '%1')
+    return result
 end
 
 tools.symbols = {
@@ -194,13 +202,23 @@ function tools.create_link(text, link, parse_mode)
     if not link then
         return text
     elseif parse_mode:lower() == 'markdown' then
-        return '[' .. tools.escape_markdown(text) .. '](' .. tools.escape_markdown(link) .. ')'
+        return '[' .. tools.escape_markdown(text) .. '](' .. tostring(link) .. ')'
+    elseif parse_mode:lower() == 'markdownv2' then
+        return '[' .. tools.escape_markdown_v2(text) .. '](' .. tostring(link):gsub('[%)\\]', '\\%1') .. ')'
     end
     return '<a href="' .. tools.escape_html(link) .. '">' .. tools.escape_html(text) .. '</a>'
 end
 
+local function sanitize_filename(name)
+    return name:gsub('%.%.', ''):gsub('[/\\]', ''):gsub('%z', '')
+end
+
 function tools.download_file(url, name, path)
-    name = name or os.time() .. '.' .. url:match('.+%/%.(.-)$')
+    if not name then
+        local ext = url:match('%.([%w]+)$') or 'bin'
+        name = tostring(os.time()) .. '.' .. ext
+    end
+    name = sanitize_filename(name)
     local body = {}
     local _, res
     if url:match('^https') then
@@ -216,17 +234,19 @@ function tools.download_file(url, name, path)
         })
     end
     if res ~= 200 then
-        error(res)
-        return false
+        return false, res
     end
     path = path and tostring(path) or '/tmp/'
     if not path:match('^/') then
-        path = '/' .. path
+        path = '/tmp/' .. path
     end
     if not path:match('/$') then
         path = path .. '/'
     end
-    local file = io.open(path .. name, 'w+')
+    local file = io.open(path .. name, 'wb')
+    if not file then
+        return false, 'Could not open file for writing'
+    end
     local contents = table.concat(body)
     file:write(contents)
     file:close()
@@ -238,14 +258,16 @@ function tools.save_to_file(data, filename, append)
     if not data or not filename then
         return false
     end
+    filename = sanitize_filename(filename)
     local mode = append and 'a+' or 'w+'
-    if not filename:match('^/') then
-        filename = '/tmp/' .. filename
+    local full_path = '/tmp/' .. filename
+    local file = io.open(full_path, mode)
+    if not file then
+        return false
     end
-    local file = io.open(filename, mode)
     file:write(data)
     file:close()
-    return filename
+    return full_path
 end
 
 function tools.file_exists(path)
@@ -260,11 +282,11 @@ function tools.get_file_as_table(path)
     if not path or not tools.file_exists(path) then
         return {}
     end
-    local file = {}
-    for line in io.lines(file) do
-        file[#file + 1] = line
+    local lines = {}
+    for line in io.lines(path) do
+        lines[#lines + 1] = line
     end
-    return file
+    return lines
 end
 
 function tools.read_file(path)
@@ -296,13 +318,15 @@ function tools.get_formatted_user(user_id, name, parse_mode)
     if not user_id or not name then
         return false
     end
-    if not parse_mode or type(parse_mode) == ('nil' or 'boolean') then
+    if not parse_mode or type(parse_mode) == 'nil' or type(parse_mode) == 'boolean' then
         parse_mode = 'MarkdownV2'
     end
     local user_id_string = '[%s](tg://user?id=%s)'
     if parse_mode:lower() == 'html' then
         user_id_string = '<a href="tg://user?id=%s">%s</a>'
         return string.format(user_id_string, user_id, tools.escape_html(name))
+    elseif parse_mode:lower() == 'markdownv2' then
+        return string.format(user_id_string, tools.escape_markdown_v2(name), user_id)
     end
     return string.format(user_id_string, tools.escape_markdown(name), user_id)
 end
@@ -317,25 +341,38 @@ for i = 97, 122 do
     table.insert(tools.random_string_charset, string.char(i))
 end
 
-function tools.random_string(length, amount)
-    if not length or tonumber(length) <= 0 then
-        return ''
-    end
-    local command = io.popen('shuf -i 1-100000 -n 1') -- uses shuf for another random value because everything in lua is shocking
-    local seed = command:read('*all')
-    command:close()
-    seed = tonumber(seed) * socket.gettime()
-    math.randomseed(seed)
-    if amount and tonumber(amount) ~= nil then
-        local output = {}
-        for _ = 1, tonumber(amount) do
-            local value = tools.random_string(length - 1) ..
-                              tools.random_string_charset[math.random(1, #tools.random_string_charset)]
-            table.insert(output, value)
+for i = 48, 57 do
+    table.insert(tools.random_string_charset, string.char(i))
+end
+
+do
+    local seeded = false
+    function tools.random_string(length, amount)
+        if not length or tonumber(length) <= 0 then
+            return ''
         end
-        return output
+        length = tonumber(length)
+        if not seeded then
+            math.randomseed(os.time() + math.floor(socket.gettime() * 1000) % 1000000)
+            seeded = true
+        end
+        if amount and tonumber(amount) ~= nil then
+            local output = {}
+            for _ = 1, tonumber(amount) do
+                local chars = {}
+                for _ = 1, length do
+                    chars[#chars + 1] = tools.random_string_charset[math.random(1, #tools.random_string_charset)]
+                end
+                table.insert(output, table.concat(chars))
+            end
+            return output
+        end
+        local chars = {}
+        for _ = 1, length do
+            chars[#chars + 1] = tools.random_string_charset[math.random(1, #tools.random_string_charset)]
+        end
+        return table.concat(chars)
     end
-    return tools.random_string(length - 1) .. tools.random_string_charset[math.random(1, #tools.random_string_charset)]
 end
 
 function tools.string_hexdump(data, length, size, space)
@@ -354,13 +391,13 @@ function tools.string_hexdump(data, length, size, space)
                 table.insert(output, formatted)
             end
         end
+        column = column + 1
         if column % space == 0 then
             table.insert(output, ' ')
         end
         if (i + size - 1) % length == 0 then
             table.insert(output, '\n')
         end
-        column = column + 1
     end
     return table.concat(output)
 end
@@ -395,21 +432,6 @@ function tools.table_random(tab, seed)
     end
 end
 
-function tools.get_word(str, i)
-    if not str then
-        return false
-    end
-    local n = 1
-    for word in str:gmatch('%g+') do
-        i = i or 1
-        if n == i then
-            return word
-        end
-        n = n + 1
-    end
-    return false
-end
-
 function tools.service_message(message)
     if message.new_chat_member then
         return true, 'new_chat_member'
@@ -435,14 +457,58 @@ function tools.service_message(message)
         return true, 'pinned_message'
     elseif message.successful_payment then
         return true, 'successful_payment'
+    elseif message.forum_topic_created then
+        return true, 'forum_topic_created'
+    elseif message.forum_topic_edited then
+        return true, 'forum_topic_edited'
+    elseif message.forum_topic_closed then
+        return true, 'forum_topic_closed'
+    elseif message.forum_topic_reopened then
+        return true, 'forum_topic_reopened'
+    elseif message.general_forum_topic_hidden then
+        return true, 'general_forum_topic_hidden'
+    elseif message.general_forum_topic_unhidden then
+        return true, 'general_forum_topic_unhidden'
+    elseif message.video_chat_scheduled then
+        return true, 'video_chat_scheduled'
+    elseif message.video_chat_started then
+        return true, 'video_chat_started'
+    elseif message.video_chat_ended then
+        return true, 'video_chat_ended'
+    elseif message.video_chat_participants_invited then
+        return true, 'video_chat_participants_invited'
+    elseif message.web_app_data then
+        return true, 'web_app_data'
+    elseif message.write_access_allowed then
+        return true, 'write_access_allowed'
+    elseif message.proximity_alert_triggered then
+        return true, 'proximity_alert_triggered'
+    elseif message.users_shared then
+        return true, 'users_shared'
+    elseif message.chat_shared then
+        return true, 'chat_shared'
+    elseif message.giveaway_created then
+        return true, 'giveaway_created'
+    elseif message.giveaway then
+        return true, 'giveaway'
+    elseif message.giveaway_winners then
+        return true, 'giveaway_winners'
+    elseif message.giveaway_completed then
+        return true, 'giveaway_completed'
+    elseif message.boost_added then
+        return true, 'boost_added'
+    elseif message.chat_background_set then
+        return true, 'chat_background_set'
+    elseif message.paid_media_purchased then
+        return true, 'paid_media_purchased'
     end
     return false
 end
 
 function tools.is_media(message)
     if message.audio or message.document or message.game or message.photo or message.sticker or message.video or
-        message.voice or message.video_note or message.contact or message.location or message.venue or message.invoice or
-        message.poll or message.dice then
+        message.animation or message.voice or message.video_note or message.contact or message.location or
+        message.venue or message.invoice or message.poll or message.dice or message.paid_media then
         return true
     end
     return false
@@ -461,6 +527,8 @@ function tools.media_type(message)
         return 'sticker'
     elseif message.video then
         return 'video'
+    elseif message.animation then
+        return 'animation'
     elseif message.voice then
         return 'voice'
     elseif message.video_note then
@@ -473,6 +541,8 @@ function tools.media_type(message)
         return 'venue'
     elseif message.invoice then
         return 'invoice'
+    elseif message.paid_media then
+        return 'paid_media'
     elseif message.forward_from or message.forward_from_chat then
         return 'forwarded'
     elseif message.dice then
@@ -512,12 +582,17 @@ function tools.file_id(message, unique)
             return message.voice.file_unique_id
         end
         return message.voice.file_id
+    elseif message.animation then
+        if unique then
+            return message.animation.file_unique_id
+        end
+        return message.animation.file_id
     elseif message.video_note then
         if unique then
             return message.video_note.file_unique_id
         end
         return message.video_note.file_id
-    elseif message.photo then -- Get the highest resolution for photos.
+    elseif message.photo then
         if unique then
             return message.photo[#message.photo].file_unique_id
         end
@@ -553,7 +628,6 @@ function tools.is_valid_url(original_url, parts, any)
     if not original_url:match('^[Hh][Tt][Tt][Pp][Ss]?://') and not any then
         original_url = 'http://' .. original_url
     end
-    -- Thanks to https://stackoverflow.com/questions/23590304/finding-a-url-in-a-string-lua-pattern
     local url, protocol, subdomain, tld, colon, port, slash, path = string.match(original_url,
         '^(([%w_.~!*:@&+$/?%%#-]-)(%w[-.%w]*%.)(%w+)(:?)(%d*)(/?)([%w_.~!*:@&+$/?%%#=-]*))$')
     if parts then
@@ -584,6 +658,9 @@ function tools.file_size(file)
             file = file:match('^(.-)/$')
         end
         file = io.open(file, 'r')
+        if not file then
+            return false, 'Could not open file!'
+        end
     end
     local current = file:seek()
     local size = file:seek('end')
@@ -643,7 +720,7 @@ function tools.unpack_telegram_invite_link(link)
     if not decoded then
         return false, 'Could not decode!'
     end
-    local user_id, chat_id, rand_long = string.unpack('>IIL', decoded)
+    local user_id, chat_id, rand_long = sunpack('>IIL', decoded)
     return {
         ['user_id'] = user_id,
         ['chat_id'] = chat_id,
@@ -666,26 +743,26 @@ function tools.unpack_file_id(file_id, media_type)
     if not decoded then
         return false, 'Could not decode!'
     end
-    local file_type = string.unpack('<b', decoded)
-    local dc_id = string.unpack('<i', decoded:sub(5, 8))
-    local file_flags = string.unpack('<i', string.char(0) .. decoded:sub(2, 4))
+    local file_type = sunpack('<b', decoded)
+    local dc_id = sunpack('<i', decoded:sub(5, 8))
+    local file_flags = sunpack('<i', string.char(0) .. decoded:sub(2, 4))
     local version = string.byte(decoded:sub(-1))
     local subversion = (version == 4) and string.byte(decoded:sub(-2, -1)) or 0
     decoded = decoded:sub(9, -1)
-    local file_reference_flag = 1 << 25
-    if not ((file_flags & file_reference_flag) == 0) then
+    local file_reference_flag = lshift(1, 25)
+    if not (band(file_flags, file_reference_flag) == 0) then
         local file_reference_length = string.byte(decoded:sub(1, 1))
         local padding
         decoded = string.char(0) .. decoded:sub(2, -1)
         if file_reference_length == 254 then
-            file_reference_length = string.unpack('<i', decoded)
+            file_reference_length = sunpack('<i', decoded)
             padding = math.abs(-file_reference_length % 4)
         else
             padding = math.abs(file_reference_length % -4)
         end
         decoded = decoded:sub(file_reference_length + padding + 1, -1)
     end
-    local user_id, access_hash = string.unpack('<ll', decoded)
+    local user_id, access_hash = sunpack('<ll', decoded)
     local payload = {
         ['file_id'] = file_id,
         ['file_type'] = file_type,
@@ -697,14 +774,14 @@ function tools.unpack_file_id(file_id, media_type)
         ['access_hash'] = access_hash
     }
     if media_type == 'photo' then
-        local encrypted_user_id, new_access_hash, volume_id, secret, _, local_id = string.unpack('<llllii', decoded)
+        local encrypted_user_id, new_access_hash, volume_id, secret, _, local_id = sunpack('<llllii', decoded)
         payload.encrypted_user_id = encrypted_user_id
         payload.access_hash = new_access_hash
         payload.volume_id = volume_id
         payload.secret = secret
         payload.local_id = local_id
     elseif media_type == 'sticker' then
-        payload.user_id = user_id >> 32
+        payload.user_id = rshift(user_id, 32)
     end
     return payload
 end
@@ -722,7 +799,7 @@ function tools.unpack_inline_message_id(inline_message_id)
     if not decoded then
         return false, 'Could not decode!'
     end
-    local dc_id, message_id, chat_id, access_hash = string.unpack('<iiI', decoded)
+    local dc_id, message_id, chat_id, access_hash = sunpack('<iiI', decoded)
     return {
         ['dc_id'] = dc_id,
         ['message_id'] = message_id,
@@ -734,7 +811,7 @@ end
 function tools.split_string(str, reverse)
     local tab = {}
     for prt in str:gmatch('([^%s]+)') do
-        if reverse then -- Useful for flipping RTL words.
+        if reverse then
             table.insert(tab, 1, prt)
         else
             table.insert(tab, prt)
@@ -746,7 +823,7 @@ end
 function tools.string_array_to_table(string_array)
     local table_array = {}
     for part in string_array:gmatch('([^,]+),?') do
-        table.insert(table_array, part)
+        table.insert(table_array, tools.trim(part))
     end
     return table_array
 end
