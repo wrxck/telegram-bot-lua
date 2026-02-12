@@ -1,5 +1,4 @@
 return function(api)
-    local json = require('dkjson')
     local tools = require('telegram-bot-lua.tools')
 
     -- Text formatting helpers for different parse modes.

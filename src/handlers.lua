@@ -1,6 +1,4 @@
 return function(api)
-    local json = require('dkjson')
-    local config = require('telegram-bot-lua.config')
 
     -- Update handler stubs
     function api.on_update(_) end
