@@ -30,7 +30,6 @@ return function(api)
     local ltn12 = require('ltn12')
     local multipart = require('multipart-post')
     local json = require('dkjson')
-    local config = require('telegram-bot-lua.config')
 
     api.async = {}
     api.async._running = false
