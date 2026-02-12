@@ -64,9 +64,9 @@ return function(api)
 
         -- RESP protocol: read a response
         local function read_response(sock_handle)
-            local line, err = sock_handle:receive('*l')
+            local line, recv_err = sock_handle:receive('*l')
             if not line then
-                return nil, 'Redis read error: ' .. tostring(err)
+                return nil, 'Redis read error: ' .. tostring(recv_err)
             end
 
             local prefix = line:sub(1, 1)
@@ -110,28 +110,28 @@ return function(api)
 
         -- Execute a raw Redis command and return the response
         function conn:command(...)
-            local ok, err = send_command(self._sock, ...)
-            if not ok then
-                return nil, 'Redis send error: ' .. tostring(err)
+            local send_ok, send_err = send_command(self._sock, ...)
+            if not send_ok then
+                return nil, 'Redis send error: ' .. tostring(send_err)
             end
             return read_response(self._sock)
         end
 
         -- Authenticate if password provided
         if opts.password then
-            local res, err = conn:command('AUTH', opts.password)
-            if not res then
+            local auth_res, auth_err = conn:command('AUTH', opts.password)
+            if not auth_res then
                 sock:close()
-                error('Redis AUTH failed: ' .. tostring(err))
+                error('Redis AUTH failed: ' .. tostring(auth_err))
             end
         end
 
         -- Select database if specified
         if opts.db and opts.db ~= 0 then
-            local res, err = conn:command('SELECT', opts.db)
-            if not res then
+            local sel_res, sel_err = conn:command('SELECT', opts.db)
+            if not sel_res then
                 sock:close()
-                error('Redis SELECT failed: ' .. tostring(err))
+                error('Redis SELECT failed: ' .. tostring(sel_err))
             end
         end
 
@@ -393,11 +393,11 @@ return function(api)
 
         function conn:is_connected()
             if not self._sock then return false end
-            local ok = pcall(function()
+            local ping_ok = pcall(function()
                 send_command(self._sock, 'PING')
                 read_response(self._sock)
             end)
-            return ok
+            return ping_ok
         end
 
         return conn

@@ -128,13 +128,13 @@ return function(api)
 
         function conn:transaction(fn)
             self:begin()
-            local ok, err = pcall(fn, self)
-            if ok then
+            local tx_ok, tx_err = pcall(fn, self)
+            if tx_ok then
                 self:commit()
                 return true
             else
                 self:rollback()
-                return false, err
+                return false, tx_err
             end
         end
 
@@ -248,13 +248,13 @@ return function(api)
 
         function conn:transaction(fn)
             self:begin()
-            local ok, err = pcall(fn, self)
-            if ok then
+            local tx_ok, tx_err = pcall(fn, self)
+            if tx_ok then
                 self:commit()
                 return true
             else
                 self:rollback()
-                return false, err
+                return false, tx_err
             end
         end
 

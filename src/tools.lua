@@ -750,7 +750,7 @@ function tools.unpack_file_id(file_id, media_type)
     local subversion = (version == 4) and string.byte(decoded:sub(-2, -1)) or 0
     decoded = decoded:sub(9, -1)
     local file_reference_flag = lshift(1, 25)
-    if not (band(file_flags, file_reference_flag) == 0) then
+    if band(file_flags, file_reference_flag) ~= 0 then
         local file_reference_length = string.byte(decoded:sub(1, 1))
         local padding
         decoded = string.char(0) .. decoded:sub(2, -1)

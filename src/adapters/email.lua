@@ -60,7 +60,6 @@ return function(api)
             assert(msg.body or msg.html, 'Email requires a body or html content')
 
             local smtp = require('socket.smtp')
-            local mime = require('mime')
             local ltn12 = require('ltn12')
 
             -- Normalize recipients to table
@@ -131,11 +130,6 @@ return function(api)
                 message_source = ltn12.source.string(header_str .. '\r\n' .. msg.body)
             end
 
-            local mesgt = {
-                headers = headers,
-                body = message_source,
-            }
-
             -- Build the send parameters
             local send_params = {
                 from = '<' .. msg.from .. '>',
@@ -155,7 +149,7 @@ return function(api)
             -- Use STARTTLS if configured
             if self._tls then
                 -- For STARTTLS on port 587, we need to use the create function
-                local ok_ssl, ssl = pcall(require, 'ssl')
+                local ok_ssl = pcall(require, 'ssl')
                 if ok_ssl then
                     send_params.create = function()
                         local socket_lib = require('socket')
