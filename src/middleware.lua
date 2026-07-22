@@ -32,20 +32,12 @@ return function(api)
         dispatch(1)
     end
 
-    -- Build the context object from a raw update.
+    -- Build the context object from a raw update. Uses the canonical update
+    -- type list shared with the dispatcher (api._update_types, defined in
+    -- handlers.lua) so middleware and handlers always agree on update types.
     local function build_context(update)
         local ctx = { update = update }
-        -- Determine update type and payload
-        local update_types = {
-            'message', 'edited_message', 'callback_query', 'inline_query',
-            'channel_post', 'edited_channel_post', 'chosen_inline_result',
-            'shipping_query', 'pre_checkout_query', 'poll', 'poll_answer',
-            'message_reaction', 'message_reaction_count', 'my_chat_member',
-            'chat_member', 'chat_join_request', 'chat_boost', 'removed_chat_boost',
-            'business_connection', 'business_message', 'edited_business_message',
-            'deleted_business_messages', 'purchased_paid_media'
-        }
-        for _, utype in ipairs(update_types) do
+        for _, utype in ipairs(api._update_types) do
             if update[utype] then
                 ctx.update_type = utype
                 ctx[utype] = update[utype]

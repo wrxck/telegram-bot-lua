@@ -3,6 +3,13 @@
 return function(api)
     local json = require('dkjson')
 
+    -- mark a table as a JSON object so dkjson encodes it as {} even when all
+    -- its fields are optional and absent (a bare empty lua table would
+    -- otherwise serialize as [], which telegram rejects for object types).
+    local function json_object(t)
+        return setmetatable(t, { ['__jsontype'] = 'object' })
+    end
+
     -- keyboard builders
 
     api.keyboard_meta = {}
@@ -116,7 +123,7 @@ return function(api)
 
     --- create a row of inline keyboard buttons with a chainable builder pattern.
     -- @return table a row object with metatable for chaining button additions
-    function api.row(_)
+    function api.row()
         return setmetatable({}, api.row_meta)
     end
 
@@ -207,9 +214,20 @@ return function(api)
         if not text or not callback_game then
             return false
         end
+        -- a CallbackGame table must be passed through intact; only scalars
+        -- are stringified. CallbackGame is an empty placeholder object, so an
+        -- empty table gets the object hint to avoid encoding as [].
+        local game = callback_game
+        if type(game) == 'table' then
+            if next(game) == nil and getmetatable(game) == nil then
+                game = json_object({})
+            end
+        else
+            game = tostring(game)
+        end
         local button = {
             ['text'] = tostring(text),
-            ['callback_game'] = tostring(callback_game)
+            ['callback_game'] = game
         }
         if encoded then
             button = json.encode(button)
@@ -310,9 +328,9 @@ return function(api)
     function api.keyboard_button_request_poll(text, poll_type)
         return {
             ['text'] = text,
-            ['request_poll'] = {
+            ['request_poll'] = json_object({
                 ['type'] = poll_type
-            }
+            })
         }
     end
 
@@ -773,25 +791,26 @@ return function(api)
     end
 
     function api.input_media_meta:video(media, caption, width, height, duration)
+        -- coerce dimensions like the standalone input_media_video builder.
         table.insert(self, {
             ['type'] = 'video',
             ['media'] = tostring(media),
             ['caption'] = caption,
-            ['width'] = width,
-            ['height'] = height,
-            ['duration'] = duration
+            ['width'] = tonumber(width),
+            ['height'] = tonumber(height),
+            ['duration'] = tonumber(duration)
         })
         return self
     end
 
-    function api.input_media(_)
+    function api.input_media()
         return setmetatable({}, api.input_media_meta)
     end
 
     -- Input message content constructors
 
     function api.input_text_message_content(message_text, parse_mode, link_preview_options, encoded)
-        parse_mode = (type(parse_mode) == 'boolean' and parse_mode == true) and 'MarkdownV2' or parse_mode
+        parse_mode = api._normalize_parse_mode(parse_mode)
         local input_message_content = {
             ['message_text'] = tostring(message_text),
             ['parse_mode'] = parse_mode,
@@ -1050,7 +1069,7 @@ return function(api)
 
     function api.chat_permissions(opts)
         opts = opts or {}
-        return {
+        return json_object({
             ['can_send_messages'] = opts.can_send_messages,
             ['can_send_audios'] = opts.can_send_audios,
             ['can_send_documents'] = opts.can_send_documents,
@@ -1066,14 +1085,14 @@ return function(api)
             ['can_pin_messages'] = opts.can_pin_messages,
             ['can_manage_topics'] = opts.can_manage_topics,
             ['can_edit_tag'] = opts.can_edit_tag
-        }
+        })
     end
 
     -- Chat administrator rights constructor
 
     function api.chat_administrator_rights(opts)
         opts = opts or {}
-        return {
+        return json_object({
             ['is_anonymous'] = opts.is_anonymous,
             ['can_manage_chat'] = opts.can_manage_chat,
             ['can_delete_messages'] = opts.can_delete_messages,
@@ -1091,7 +1110,7 @@ return function(api)
             ['can_manage_topics'] = opts.can_manage_topics,
             ['can_manage_direct_messages'] = opts.can_manage_direct_messages,
             ['can_manage_tags'] = opts.can_manage_tags
-        }
+        })
     end
 
     -- Bot command constructors
@@ -1168,21 +1187,25 @@ return function(api)
     -- Message entity
 
     function api.message_entity(entity_type, offset, length, url, user, language, custom_emoji_id)
+        -- optional fields must stay nil when absent; unconditional tostring
+        -- would send the literal string "nil" to telegram.
         return {
             ['type'] = tostring(entity_type),
             ['offset'] = tonumber(offset),
             ['length'] = tonumber(length),
-            ['url'] = tostring(url),
+            ['url'] = url ~= nil and tostring(url) or nil,
             ['user'] = type(user) == 'table' and user or nil,
-            ['language'] = tostring(language),
-            ['custom_emoji_id'] = tostring(custom_emoji_id)
+            ['language'] = language ~= nil and tostring(language) or nil,
+            ['custom_emoji_id'] = custom_emoji_id ~= nil and tostring(custom_emoji_id) or nil
         }
     end
 
     -- Reply parameters
 
     function api.reply_parameters(message_id, chat_id, allow_sending_without_reply, quote, quote_parse_mode, quote_entities, quote_position, opts)
-        quote_entities = type(quote_entities) == 'table' and json.encode(quote_entities) or quote_entities
+        -- quote_entities stays a table: consumers json-encode the whole
+        -- reply_parameters object, so pre-encoding here double-encoded it
+        -- into a JSON string on the wire.
         opts = opts or {}
         return {
             ['message_id'] = tonumber(message_id),
@@ -1244,23 +1267,23 @@ return function(api)
 
     function api.accepted_gift_types(opts)
         opts = opts or {}
-        return {
+        return json_object({
             ['unlimited_gifts'] = opts.unlimited_gifts,
             ['limited_gifts'] = opts.limited_gifts,
             ['unique_gifts'] = opts.unique_gifts,
             ['premium_subscription'] = opts.premium_subscription,
             ['gifts_from_channels'] = opts.gifts_from_channels
-        }
+        })
     end
 
     -- Suggested post parameters
 
     function api.suggested_post_parameters(opts)
         opts = opts or {}
-        return {
+        return json_object({
             ['star_count'] = opts.star_count,
             ['pay_for_sponsored_message'] = opts.pay_for_sponsored_message
-        }
+        })
     end
 
     -- Passport element error constructors

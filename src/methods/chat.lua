@@ -65,10 +65,7 @@ return function(api)
     -- @param title string new chat title (max 128 characters)
     -- @return table,number the response object and HTTP status
     function api.set_chat_title(chat_id, title)
-        title = tostring(title)
-        if title:len() > 128 then
-            title = title:sub(1, 128)
-        end
+        title = api._truncate(title, 128)
         local success, res = api.request(config.endpoint .. api.token .. '/setChatTitle', {
             ['chat_id'] = chat_id,
             ['title'] = title
@@ -81,10 +78,7 @@ return function(api)
     -- @param description string new chat description (max 255 characters)
     -- @return table,number the response object and HTTP status
     function api.set_chat_description(chat_id, description)
-        description = tostring(description)
-        if description:len() > 255 then
-            description = description:sub(1, 255)
-        end
+        description = api._truncate(description, 255)
         local success, res = api.request(config.endpoint .. api.token .. '/setChatDescription', {
             ['chat_id'] = chat_id,
             ['description'] = description

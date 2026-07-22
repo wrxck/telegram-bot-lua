@@ -4,23 +4,17 @@
 -- @module telegram-bot-lua.framework
 return function(api)
 
-    -- update field carrying the payload, in priority order.
-    local payload_fields = {
-        'message', 'edited_message', 'callback_query', 'inline_query',
-        'channel_post', 'edited_channel_post', 'chosen_inline_result',
-        'shipping_query', 'pre_checkout_query', 'poll', 'poll_answer',
-        'message_reaction', 'message_reaction_count', 'my_chat_member',
-        'chat_member', 'chat_join_request', 'business_message',
-        'edited_business_message', 'guest_message'
-    }
     local message_like = {
         message = true, edited_message = true, channel_post = true,
         edited_channel_post = true, business_message = true,
         edited_business_message = true
     }
 
+    -- find the update field carrying the payload, using the canonical
+    -- priority-ordered list shared with the dispatcher (api._update_types,
+    -- defined in handlers.lua).
     local function detect(update)
-        for _, f in ipairs(payload_fields) do
+        for _, f in ipairs(api._update_types) do
             if update[f] then return f, update[f] end
         end
     end

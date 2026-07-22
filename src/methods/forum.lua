@@ -19,10 +19,7 @@ return function(api)
     -- @return table,number the response object and HTTP status
     function api.create_forum_topic(chat_id, name, opts)
         opts = opts or {}
-        name = tostring(name)
-        if name:len() > 128 then
-            name = name:sub(1, 128)
-        end
+        name = api._truncate(name, 128)
         local success, res = api.request(config.endpoint .. api.token .. '/createForumTopic', {
             ['chat_id'] = chat_id,
             ['name'] = name,
@@ -103,10 +100,7 @@ return function(api)
     -- @param name string new topic name (max 128 characters)
     -- @return table,number the response object and HTTP status
     function api.edit_general_forum_topic(chat_id, name)
-        name = tostring(name)
-        if name:len() > 128 then
-            name = name:sub(1, 128)
-        end
+        name = api._truncate(name, 128)
         local success, res = api.request(config.endpoint .. api.token .. '/editGeneralForumTopic', {
             ['chat_id'] = chat_id,
             ['name'] = name

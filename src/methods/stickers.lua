@@ -197,10 +197,7 @@ return function(api)
     -- @param title string sticker set title (max 64 characters)
     -- @return table,number the response object and HTTP status
     function api.set_sticker_set_title(name, title)
-        title = tostring(title)
-        if title:len() > 64 then
-            title = title:sub(1, 64)
-        end
+        title = api._truncate(title, 64)
         local success, res = api.request(config.endpoint .. api.token .. '/setStickerSetTitle', {
             ['name'] = name,
             ['title'] = title

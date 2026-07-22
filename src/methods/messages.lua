@@ -29,7 +29,7 @@ return function(api)
         reply_markup = type(reply_markup) == 'table' and json.encode(reply_markup) or reply_markup
         chat_id = (type(chat_id) == 'table' and chat_id.chat and chat_id.chat.id) and chat_id.chat.id or chat_id
         local parse_mode = opts.parse_mode
-        parse_mode = (type(parse_mode) == 'boolean' and parse_mode == true) and 'MarkdownV2' or parse_mode
+        parse_mode = api._normalize_parse_mode(parse_mode)
         local success, res = api.request(config.endpoint .. api.token .. '/sendMessage', {
             ['chat_id'] = chat_id,
             ['message_thread_id'] = opts.message_thread_id,
@@ -66,32 +66,18 @@ return function(api)
             return false
         end
         opts = opts or {}
-        local reply_markup = opts.reply_markup
-        reply_markup = type(reply_markup) == 'table' and json.encode(reply_markup) or reply_markup
-        local parse_mode = opts.parse_mode
-        parse_mode = (type(parse_mode) == 'boolean' and parse_mode == true) and 'MarkdownV2' or parse_mode
-        local reply_parameters = opts.reply_parameters
-        if not reply_parameters then
-            reply_parameters = api.reply_parameters(message.message_id, message.chat.id, true)
+        -- delegate to send_message so the two parameter sets cannot drift;
+        -- inject reply_parameters derived from the message unless the caller
+        -- supplied their own. work on a copy so the caller's opts table is
+        -- never mutated.
+        local merged = {}
+        for k, v in pairs(opts) do
+            merged[k] = v
         end
-        reply_parameters = type(reply_parameters) == 'table' and json.encode(reply_parameters) or reply_parameters
-        local entities = opts.entities
-        entities = type(entities) == 'table' and json.encode(entities) or entities
-        local link_preview_options = opts.link_preview_options
-        link_preview_options = type(link_preview_options) == 'table' and json.encode(link_preview_options) or link_preview_options
-        local success, res = api.request(config.endpoint .. api.token .. '/sendMessage', {
-            ['chat_id'] = message.chat.id,
-            ['message_thread_id'] = opts.message_thread_id,
-            ['text'] = text,
-            ['parse_mode'] = parse_mode,
-            ['entities'] = entities,
-            ['link_preview_options'] = link_preview_options,
-            ['disable_notification'] = opts.disable_notification,
-            ['protect_content'] = opts.protect_content,
-            ['reply_parameters'] = reply_parameters,
-            ['reply_markup'] = reply_markup
-        })
-        return success, res
+        if not merged.reply_parameters then
+            merged.reply_parameters = api.reply_parameters(message.message_id, message.chat.id, true)
+        end
+        return api.send_message(message.chat.id, text, merged)
     end
 
     --- forward a message from one chat to another.
@@ -940,7 +926,7 @@ return function(api)
         local reply_markup = opts.reply_markup
         reply_markup = type(reply_markup) == 'table' and json.encode(reply_markup) or reply_markup
         local parse_mode = opts.parse_mode
-        parse_mode = (type(parse_mode) == 'boolean' and parse_mode == true) and 'MarkdownV2' or parse_mode
+        parse_mode = api._normalize_parse_mode(parse_mode)
         local rich_message = opts.rich_message
         rich_message = type(rich_message) == 'table' and json.encode(rich_message) or rich_message
         local success, res = api.request(config.endpoint .. api.token .. '/editMessageText', {
@@ -965,7 +951,7 @@ return function(api)
         local reply_markup = opts.reply_markup
         reply_markup = type(reply_markup) == 'table' and json.encode(reply_markup) or reply_markup
         local parse_mode = opts.parse_mode
-        parse_mode = (type(parse_mode) == 'boolean' and parse_mode == true) and 'MarkdownV2' or parse_mode
+        parse_mode = api._normalize_parse_mode(parse_mode)
         local success, res = api.request(config.endpoint .. api.token .. '/editMessageCaption', {
             ['chat_id'] = chat_id,
             ['message_id'] = message_id,

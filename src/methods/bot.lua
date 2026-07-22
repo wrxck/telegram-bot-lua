@@ -72,10 +72,7 @@ return function(api)
     -- @return table,number the response object and HTTP status
     function api.set_my_name(name, opts)
         opts = opts or {}
-        name = tostring(name)
-        if name:len() > 64 then
-            name = name:sub(1, 64)
-        end
+        name = api._truncate(name, 64)
         local success, res = api.request(config.endpoint .. api.token .. '/setMyName', {
             ['name'] = name,
             ['language_code'] = opts.language_code
@@ -102,10 +99,7 @@ return function(api)
     -- @return table,number the response object and HTTP status
     function api.set_my_description(description, opts)
         opts = opts or {}
-        description = tostring(description)
-        if description:len() > 512 then
-            description = description:sub(1, 512)
-        end
+        description = api._truncate(description, 512)
         local success, res = api.request(config.endpoint .. api.token .. '/setMyDescription', {
             ['description'] = description,
             ['language_code'] = opts.language_code
@@ -132,10 +126,7 @@ return function(api)
     -- @return table,number the response object and HTTP status
     function api.set_my_short_description(short_description, opts)
         opts = opts or {}
-        short_description = tostring(short_description)
-        if short_description:len() > 120 then
-            short_description = short_description:sub(1, 120)
-        end
+        short_description = api._truncate(short_description, 120)
         local success, res = api.request(config.endpoint .. api.token .. '/setMyShortDescription', {
             ['short_description'] = short_description,
             ['language_code'] = opts.language_code

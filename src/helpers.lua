@@ -11,9 +11,10 @@ return function(api)
         if not chat_id or not user_id then
             return false
         end
-        local success = api.get_chat_member(chat_id, user_id)
+        -- preserve the error detail on failure, like the other helpers do.
+        local success, res = api.get_chat_member(chat_id, user_id)
         if not success then
-            return success
+            return success, res
         end
         local p = success.result
         return {

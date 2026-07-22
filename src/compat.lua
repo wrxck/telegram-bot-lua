@@ -107,12 +107,16 @@ return function(api)
             if args[1] then link_preview_options = { is_disabled = true } end
             local reply_parameters
             if args[3] then reply_parameters = api.reply_parameters(args[3]) end
+            -- v2 shorthand positions: parse_mode, disable_web_page_preview,
+            -- disable_notification, reply_to_message_id, reply_markup. only
+            -- position 4 after parse_mode ever carried reply_markup; other
+            -- trailing positionals must not be forwarded as markup.
             return v3_send_message(chat_id, text, {
                 parse_mode = third,
                 link_preview_options = link_preview_options,
                 disable_notification = args[2],
                 reply_parameters = reply_parameters,
-                reply_markup = args[4] or args[5] or args[6] or args[7] or args[8]
+                reply_markup = args[4]
             })
         end
         -- v2 full positional: 3rd arg is message_thread_id (number/nil) + more args
