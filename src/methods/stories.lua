@@ -1,7 +1,6 @@
 --- stories API methods.
 -- @module telegram-bot-lua.methods.stories
 return function(api)
-    local json = require('dkjson')
     local config = require('telegram-bot-lua.config')
 
     --- repost a story to a chat.
@@ -32,11 +31,11 @@ return function(api)
     -- @return string|table the HTTP status or error details
     function api.post_story(business_connection_id, content, active_period, opts)
         opts = opts or {}
-        content = type(content) == 'table' and json.encode(content) or content
+        content = api._json_enc(content)
         local caption_entities = opts.caption_entities
-        caption_entities = type(caption_entities) == 'table' and json.encode(caption_entities) or caption_entities
+        caption_entities = api._json_enc(caption_entities)
         local areas = opts.areas
-        areas = type(areas) == 'table' and json.encode(areas) or areas
+        areas = api._json_enc(areas)
         local success, res = api.request(config.endpoint .. api.token .. '/postStory', {
             ['business_connection_id'] = business_connection_id,
             ['content'] = content,
@@ -64,11 +63,11 @@ return function(api)
     -- @return string|table the HTTP status or error details
     function api.edit_story(business_connection_id, story_id, content, opts)
         opts = opts or {}
-        content = type(content) == 'table' and json.encode(content) or content
+        content = api._json_enc(content)
         local caption_entities = opts.caption_entities
-        caption_entities = type(caption_entities) == 'table' and json.encode(caption_entities) or caption_entities
+        caption_entities = api._json_enc(caption_entities)
         local areas = opts.areas
-        areas = type(areas) == 'table' and json.encode(areas) or areas
+        areas = api._json_enc(areas)
         local success, res = api.request(config.endpoint .. api.token .. '/editStory', {
             ['business_connection_id'] = business_connection_id,
             ['story_id'] = story_id,

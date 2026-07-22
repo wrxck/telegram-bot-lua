@@ -1,8 +1,6 @@
 --- stickers API methods.
 -- @module telegram-bot-lua.methods.stickers
 return function(api)
-    local json = require('dkjson')
-    local function json_enc(v) return type(v) == 'table' and json.encode(v) or v end
     local config = require('telegram-bot-lua.config')
 
     --- send a static, animated, or video sticker.
@@ -18,9 +16,9 @@ return function(api)
     function api.send_sticker(chat_id, sticker, opts)
         opts = opts or {}
         local reply_parameters = opts.reply_parameters
-        reply_parameters = type(reply_parameters) == 'table' and json.encode(reply_parameters) or reply_parameters
+        reply_parameters = api._json_enc(reply_parameters)
         local reply_markup = opts.reply_markup
-        reply_markup = type(reply_markup) == 'table' and json.encode(reply_markup) or reply_markup
+        reply_markup = api._json_enc(reply_markup)
         local success, res = api.request(config.endpoint .. api.token .. '/sendSticker', {
             ['chat_id'] = chat_id,
             ['message_thread_id'] = opts.message_thread_id,
@@ -28,7 +26,7 @@ return function(api)
             ['emoji'] = opts.emoji,
             ['disable_notification'] = opts.disable_notification,
             ['protect_content'] = opts.protect_content,
-            ['suggested_post_parameters'] = json_enc(opts.suggested_post_parameters),
+            ['suggested_post_parameters'] = api._json_enc(opts.suggested_post_parameters),
             ['reply_parameters'] = reply_parameters,
             ['reply_markup'] = reply_markup,
             ['business_connection_id'] = opts.business_connection_id,
@@ -54,7 +52,7 @@ return function(api)
     -- @param custom_emoji_ids table|string a JSON-serialized list of custom emoji identifiers
     -- @return table,number the response object and HTTP status
     function api.get_custom_emoji_stickers(custom_emoji_ids)
-        custom_emoji_ids = type(custom_emoji_ids) == 'table' and json.encode(custom_emoji_ids) or custom_emoji_ids
+        custom_emoji_ids = api._json_enc(custom_emoji_ids)
         local success, res = api.request(config.endpoint .. api.token .. '/getCustomEmojiStickers', {
             ['custom_emoji_ids'] = custom_emoji_ids
         })
@@ -87,7 +85,7 @@ return function(api)
     -- @return table,number the response object and HTTP status
     function api.create_new_sticker_set(user_id, name, title, stickers, opts)
         opts = opts or {}
-        stickers = type(stickers) == 'table' and json.encode(stickers) or stickers
+        stickers = api._json_enc(stickers)
         local success, res = api.request(config.endpoint .. api.token .. '/createNewStickerSet', {
             ['user_id'] = user_id,
             ['name'] = name,
@@ -105,7 +103,7 @@ return function(api)
     -- @param sticker table|string a JSON-serialized object with information about the sticker
     -- @return table,number the response object and HTTP status
     function api.add_sticker_to_set(user_id, name, sticker)
-        sticker = type(sticker) == 'table' and json.encode(sticker) or sticker
+        sticker = api._json_enc(sticker)
         local success, res = api.request(config.endpoint .. api.token .. '/addStickerToSet', {
             ['user_id'] = user_id,
             ['name'] = name,
@@ -143,7 +141,7 @@ return function(api)
     -- @param sticker table|string a JSON-serialized object with information about the new sticker
     -- @return table,number the response object and HTTP status
     function api.replace_sticker_in_set(user_id, name, old_sticker, sticker)
-        sticker = type(sticker) == 'table' and json.encode(sticker) or sticker
+        sticker = api._json_enc(sticker)
         local success, res = api.request(config.endpoint .. api.token .. '/replaceStickerInSet', {
             ['user_id'] = user_id,
             ['name'] = name,
@@ -158,7 +156,7 @@ return function(api)
     -- @param emoji_list table|string a JSON-serialized list of 1-20 emoji associated with the sticker
     -- @return table,number the response object and HTTP status
     function api.set_sticker_emoji_list(sticker, emoji_list)
-        emoji_list = type(emoji_list) == 'table' and json.encode(emoji_list) or emoji_list
+        emoji_list = api._json_enc(emoji_list)
         local success, res = api.request(config.endpoint .. api.token .. '/setStickerEmojiList', {
             ['sticker'] = sticker,
             ['emoji_list'] = emoji_list
@@ -171,7 +169,7 @@ return function(api)
     -- @param keywords table|string a JSON-serialized list of 0-20 search keywords
     -- @return table,number the response object and HTTP status
     function api.set_sticker_keywords(sticker, keywords)
-        keywords = type(keywords) == 'table' and json.encode(keywords) or keywords
+        keywords = api._json_enc(keywords)
         local success, res = api.request(config.endpoint .. api.token .. '/setStickerKeywords', {
             ['sticker'] = sticker,
             ['keywords'] = keywords
@@ -184,7 +182,7 @@ return function(api)
     -- @param mask_position table|string a JSON-serialized object with the position where the mask should be placed
     -- @return table,number the response object and HTTP status
     function api.set_sticker_mask_position(sticker, mask_position)
-        mask_position = type(mask_position) == 'table' and json.encode(mask_position) or mask_position
+        mask_position = api._json_enc(mask_position)
         local success, res = api.request(config.endpoint .. api.token .. '/setStickerMaskPosition', {
             ['sticker'] = sticker,
             ['mask_position'] = mask_position

@@ -1,7 +1,6 @@
 --- rich message API methods (Bot API 10.1).
 -- @module telegram-bot-lua.methods.rich
 return function(api)
-    local json = require('dkjson')
     local config = require('telegram-bot-lua.config')
 
     --- send a rich formatted message to a chat.
@@ -23,13 +22,13 @@ return function(api)
     -- @return table,number the response object and HTTP status
     function api.send_rich_message(chat_id, rich_message, opts)
         opts = opts or {}
-        rich_message = type(rich_message) == 'table' and json.encode(rich_message) or rich_message
+        rich_message = api._json_enc(rich_message)
         local suggested_post_parameters = opts.suggested_post_parameters
-        suggested_post_parameters = type(suggested_post_parameters) == 'table' and json.encode(suggested_post_parameters) or suggested_post_parameters
+        suggested_post_parameters = api._json_enc(suggested_post_parameters)
         local reply_parameters = opts.reply_parameters
-        reply_parameters = type(reply_parameters) == 'table' and json.encode(reply_parameters) or reply_parameters
+        reply_parameters = api._json_enc(reply_parameters)
         local reply_markup = opts.reply_markup
-        reply_markup = type(reply_markup) == 'table' and json.encode(reply_markup) or reply_markup
+        reply_markup = api._json_enc(reply_markup)
         local success, res = api.request(config.endpoint .. api.token .. '/sendRichMessage', {
             ['business_connection_id'] = opts.business_connection_id,
             ['chat_id'] = chat_id,
@@ -58,7 +57,7 @@ return function(api)
     -- @return table,number the response object and HTTP status
     function api.send_rich_message_draft(chat_id, draft_id, rich_message, opts)
         opts = opts or {}
-        rich_message = type(rich_message) == 'table' and json.encode(rich_message) or rich_message
+        rich_message = api._json_enc(rich_message)
         local success, res = api.request(config.endpoint .. api.token .. '/sendRichMessageDraft', {
             ['chat_id'] = chat_id,
             ['message_thread_id'] = opts.message_thread_id,

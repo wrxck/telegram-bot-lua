@@ -1,7 +1,6 @@
 --- updates API methods.
 -- @module telegram-bot-lua.methods.updates
 return function(api)
-    local json = require('dkjson')
     local config = require('telegram-bot-lua.config')
 
     --- receive incoming updates using long polling.
@@ -11,7 +10,7 @@ return function(api)
     function api.get_updates(opts)
         opts = opts or {}
         local allowed_updates = opts.allowed_updates
-        allowed_updates = type(allowed_updates) == 'table' and json.encode(allowed_updates) or allowed_updates
+        allowed_updates = api._json_enc(allowed_updates)
         -- honour config.endpoint like every other method (it can point at a
         -- local bot API server); the beta endpoint inserts 'beta/' before the
         -- trailing 'bot' path segment.
@@ -36,7 +35,7 @@ return function(api)
     function api.set_webhook(url, opts)
         opts = opts or {}
         local allowed_updates = opts.allowed_updates
-        allowed_updates = type(allowed_updates) == 'table' and json.encode(allowed_updates) or allowed_updates
+        allowed_updates = api._json_enc(allowed_updates)
         local success, res = api.request(config.endpoint .. api.token .. '/setWebhook', {
             ['url'] = url,
             ['ip_address'] = opts.ip_address,

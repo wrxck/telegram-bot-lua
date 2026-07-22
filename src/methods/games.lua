@@ -1,7 +1,6 @@
 --- games API methods.
 -- @module telegram-bot-lua.methods.games
 return function(api)
-    local json = require('dkjson')
     local config = require('telegram-bot-lua.config')
 
     --- send a game to a chat.
@@ -13,9 +12,9 @@ return function(api)
     function api.send_game(chat_id, game_short_name, opts)
         opts = opts or {}
         local reply_parameters = opts.reply_parameters
-        reply_parameters = type(reply_parameters) == 'table' and json.encode(reply_parameters) or reply_parameters
+        reply_parameters = api._json_enc(reply_parameters)
         local reply_markup = opts.reply_markup
-        reply_markup = type(reply_markup) == 'table' and json.encode(reply_markup) or reply_markup
+        reply_markup = api._json_enc(reply_markup)
         local success, res = api.request(config.endpoint .. api.token .. '/sendGame', {
             ['chat_id'] = chat_id,
             ['message_thread_id'] = opts.message_thread_id,

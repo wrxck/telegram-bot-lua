@@ -1,7 +1,6 @@
 --- chat API methods.
 -- @module telegram-bot-lua.methods.chat
 return function(api)
-    local json = require('dkjson')
     local config = require('telegram-bot-lua.config')
 
     --- get up-to-date information about the chat.
@@ -117,7 +116,7 @@ return function(api)
     -- @return table,number the response object and HTTP status
     function api.set_chat_permissions(chat_id, permissions, opts)
         opts = opts or {}
-        permissions = type(permissions) == 'table' and json.encode(permissions) or permissions
+        permissions = api._json_enc(permissions)
         local success, res = api.request(config.endpoint .. api.token .. '/setChatPermissions', {
             ['chat_id'] = chat_id,
             ['permissions'] = permissions,

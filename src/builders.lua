@@ -856,208 +856,50 @@ return function(api)
     api.inline_result_meta = {}
     api.inline_result_meta.__index = api.inline_result_meta
 
-    function api.inline_result_meta:type(type)
-        self['type'] = tostring(type)
-        return self
+    -- the inline-result setters are uniform three-liners differing only in
+    -- their coercion, so they are generated from field lists: string fields
+    -- are tostring'd, numeric fields tonumber'd, raw fields stored as given.
+    local inline_result_fields = {
+        string = {
+            'type', 'title', 'url', 'description', 'thumbnail_url',
+            'photo_url', 'caption', 'gif_url', 'mpeg4_url', 'video_url',
+            'mime_type', 'audio_url', 'performer', 'voice_url',
+            'document_url', 'address', 'foursquare_id', 'phone_number',
+            'first_name', 'last_name', 'game_short_name'
+        },
+        number = {
+            'thumbnail_width', 'thumbnail_height', 'photo_width',
+            'photo_height', 'gif_width', 'gif_height', 'mpeg4_width',
+            'mpeg4_height', 'video_width', 'video_height', 'video_duration',
+            'audio_duration', 'voice_duration', 'latitude', 'longitude',
+            'live_period'
+        },
+        raw = { 'input_message_content', 'reply_markup' }
+    }
+    local inline_result_coerce = {
+        string = tostring,
+        number = tonumber,
+        raw = function(value) return value end
+    }
+    for kind, fields in pairs(inline_result_fields) do
+        local coerce = inline_result_coerce[kind]
+        for _, field in ipairs(fields) do
+            api.inline_result_meta[field] = function(self, value)
+                self[field] = coerce(value)
+                return self
+            end
+        end
     end
 
+    -- id defaults to '1' and hide_url normalizes nil to false, so these two
+    -- keep bespoke setters.
     function api.inline_result_meta:id(id)
         self['id'] = id and tostring(id) or '1'
         return self
     end
 
-    function api.inline_result_meta:title(title)
-        self['title'] = tostring(title)
-        return self
-    end
-
-    function api.inline_result_meta:input_message_content(input_message_content)
-        self['input_message_content'] = input_message_content
-        return self
-    end
-
-    function api.inline_result_meta:reply_markup(reply_markup)
-        self['reply_markup'] = reply_markup
-        return self
-    end
-
-    function api.inline_result_meta:url(url)
-        self['url'] = tostring(url)
-        return self
-    end
-
     function api.inline_result_meta:hide_url(hide_url)
         self['hide_url'] = hide_url or false
-        return self
-    end
-
-    function api.inline_result_meta:description(description)
-        self['description'] = tostring(description)
-        return self
-    end
-
-    function api.inline_result_meta:thumbnail_url(thumbnail_url)
-        self['thumbnail_url'] = tostring(thumbnail_url)
-        return self
-    end
-
-    function api.inline_result_meta:thumbnail_width(thumbnail_width)
-        self['thumbnail_width'] = tonumber(thumbnail_width)
-        return self
-    end
-
-    function api.inline_result_meta:thumbnail_height(thumbnail_height)
-        self['thumbnail_height'] = tonumber(thumbnail_height)
-        return self
-    end
-
-    function api.inline_result_meta:photo_url(photo_url)
-        self['photo_url'] = tostring(photo_url)
-        return self
-    end
-
-    function api.inline_result_meta:photo_width(photo_width)
-        self['photo_width'] = tonumber(photo_width)
-        return self
-    end
-
-    function api.inline_result_meta:photo_height(photo_height)
-        self['photo_height'] = tonumber(photo_height)
-        return self
-    end
-
-    function api.inline_result_meta:caption(caption)
-        self['caption'] = tostring(caption)
-        return self
-    end
-
-    function api.inline_result_meta:gif_url(gif_url)
-        self['gif_url'] = tostring(gif_url)
-        return self
-    end
-
-    function api.inline_result_meta:gif_width(gif_width)
-        self['gif_width'] = tonumber(gif_width)
-        return self
-    end
-
-    function api.inline_result_meta:gif_height(gif_height)
-        self['gif_height'] = tonumber(gif_height)
-        return self
-    end
-
-    function api.inline_result_meta:mpeg4_url(mpeg4_url)
-        self['mpeg4_url'] = tostring(mpeg4_url)
-        return self
-    end
-
-    function api.inline_result_meta:mpeg4_width(mpeg4_width)
-        self['mpeg4_width'] = tonumber(mpeg4_width)
-        return self
-    end
-
-    function api.inline_result_meta:mpeg4_height(mpeg4_height)
-        self['mpeg4_height'] = tonumber(mpeg4_height)
-        return self
-    end
-
-    function api.inline_result_meta:video_url(video_url)
-        self['video_url'] = tostring(video_url)
-        return self
-    end
-
-    function api.inline_result_meta:mime_type(mime_type)
-        self['mime_type'] = tostring(mime_type)
-        return self
-    end
-
-    function api.inline_result_meta:video_width(video_width)
-        self['video_width'] = tonumber(video_width)
-        return self
-    end
-
-    function api.inline_result_meta:video_height(video_height)
-        self['video_height'] = tonumber(video_height)
-        return self
-    end
-
-    function api.inline_result_meta:video_duration(video_duration)
-        self['video_duration'] = tonumber(video_duration)
-        return self
-    end
-
-    function api.inline_result_meta:audio_url(audio_url)
-        self['audio_url'] = tostring(audio_url)
-        return self
-    end
-
-    function api.inline_result_meta:performer(performer)
-        self['performer'] = tostring(performer)
-        return self
-    end
-
-    function api.inline_result_meta:audio_duration(audio_duration)
-        self['audio_duration'] = tonumber(audio_duration)
-        return self
-    end
-
-    function api.inline_result_meta:voice_url(voice_url)
-        self['voice_url'] = tostring(voice_url)
-        return self
-    end
-
-    function api.inline_result_meta:voice_duration(voice_duration)
-        self['voice_duration'] = tonumber(voice_duration)
-        return self
-    end
-
-    function api.inline_result_meta:document_url(document_url)
-        self['document_url'] = tostring(document_url)
-        return self
-    end
-
-    function api.inline_result_meta:latitude(latitude)
-        self['latitude'] = tonumber(latitude)
-        return self
-    end
-
-    function api.inline_result_meta:longitude(longitude)
-        self['longitude'] = tonumber(longitude)
-        return self
-    end
-
-    function api.inline_result_meta:live_period(live_period)
-        self['live_period'] = tonumber(live_period)
-        return self
-    end
-
-    function api.inline_result_meta:address(address)
-        self['address'] = tostring(address)
-        return self
-    end
-
-    function api.inline_result_meta:foursquare_id(foursquare_id)
-        self['foursquare_id'] = tostring(foursquare_id)
-        return self
-    end
-
-    function api.inline_result_meta:phone_number(phone_number)
-        self['phone_number'] = tostring(phone_number)
-        return self
-    end
-
-    function api.inline_result_meta:first_name(first_name)
-        self['first_name'] = tostring(first_name)
-        return self
-    end
-
-    function api.inline_result_meta:last_name(last_name)
-        self['last_name'] = tostring(last_name)
-        return self
-    end
-
-    function api.inline_result_meta:game_short_name(game_short_name)
-        self['game_short_name'] = tostring(game_short_name)
         return self
     end
 

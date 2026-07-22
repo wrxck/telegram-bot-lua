@@ -1,7 +1,6 @@
 --- business account API methods.
 -- @module telegram-bot-lua.methods.business
 return function(api)
-    local json = require('dkjson')
     local config = require('telegram-bot-lua.config')
 
     --- get information about the connection of the bot with a business account.
@@ -33,7 +32,7 @@ return function(api)
     -- @param message_ids table|string a JSON-serialized list of 1-100 identifiers of messages to delete
     -- @return table,number the response object and HTTP status
     function api.delete_business_messages(business_connection_id, message_ids)
-        message_ids = type(message_ids) == 'table' and json.encode(message_ids) or message_ids
+        message_ids = api._json_enc(message_ids)
         local success, res = api.request(config.endpoint .. api.token .. '/deleteBusinessMessages', {
             ['business_connection_id'] = business_connection_id,
             ['message_ids'] = message_ids
@@ -93,7 +92,7 @@ return function(api)
     -- @return table,number the response object and HTTP status
     function api.set_business_account_profile_photo(business_connection_id, photo, opts)
         opts = opts or {}
-        photo = type(photo) == 'table' and json.encode(photo) or photo
+        photo = api._json_enc(photo)
         local success, res = api.request(config.endpoint .. api.token .. '/setBusinessAccountProfilePhoto', {
             ['business_connection_id'] = business_connection_id,
             ['photo'] = photo,
@@ -122,7 +121,7 @@ return function(api)
     -- @param accepted_gift_types table|string a JSON-serialized AcceptedGiftTypes object
     -- @return table,number the response object and HTTP status
     function api.set_business_account_gift_settings(business_connection_id, show_gift_button, accepted_gift_types)
-        accepted_gift_types = type(accepted_gift_types) == 'table' and json.encode(accepted_gift_types) or accepted_gift_types
+        accepted_gift_types = api._json_enc(accepted_gift_types)
         local success, res = api.request(config.endpoint .. api.token .. '/setBusinessAccountGiftSettings', {
             ['business_connection_id'] = business_connection_id,
             ['show_gift_button'] = show_gift_button,

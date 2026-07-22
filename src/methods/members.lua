@@ -1,7 +1,6 @@
 --- members API methods.
 -- @module telegram-bot-lua.methods.members
 return function(api)
-    local json = require('dkjson')
     local config = require('telegram-bot-lua.config')
 
     --- ban a user from a chat.
@@ -48,7 +47,7 @@ return function(api)
     -- @return table,number the response object and HTTP status
     function api.restrict_chat_member(chat_id, user_id, permissions, opts)
         opts = opts or {}
-        permissions = type(permissions) == 'table' and json.encode(permissions) or permissions
+        permissions = api._json_enc(permissions)
         local success, res = api.request(config.endpoint .. api.token .. '/restrictChatMember', {
             ['chat_id'] = chat_id,
             ['user_id'] = user_id,

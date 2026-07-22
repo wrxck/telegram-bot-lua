@@ -64,6 +64,13 @@ function api.configure(token, debug)
     return api
 end
 
+-- encode a table-valued API parameter as JSON, passing scalars through.
+-- the standard coercion for every table parameter the bot API expects as a
+-- serialized JSON string (reply_markup, entities, options, ...).
+function api._json_enc(value)
+    return type(value) == 'table' and json.encode(value) or value
+end
+
 -- normalize the boolean parse_mode shorthand: true means 'MarkdownV2', and
 -- false means "no parse mode" (the parameter is omitted rather than being
 -- sent as the string "false").

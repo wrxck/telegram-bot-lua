@@ -1,7 +1,6 @@
 --- gifts API methods.
 -- @module telegram-bot-lua.methods.gifts
 return function(api)
-    local json = require('dkjson')
     local config = require('telegram-bot-lua.config')
 
     --- get the list of gifts received by a user.
@@ -105,7 +104,7 @@ return function(api)
     function api.gift_premium_subscription(user_id, month_count, star_count, opts)
         opts = opts or {}
         local text_entities = opts.text_entities
-        text_entities = type(text_entities) == 'table' and json.encode(text_entities) or text_entities
+        text_entities = api._json_enc(text_entities)
         local success, res = api.request(config.endpoint .. api.token .. '/giftPremiumSubscription', {
             ['user_id'] = user_id,
             ['month_count'] = month_count,

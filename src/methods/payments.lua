@@ -1,8 +1,6 @@
 --- payments API methods.
 -- @module telegram-bot-lua.methods.payments
 return function(api)
-    local json = require('dkjson')
-    local function json_enc(v) return type(v) == 'table' and json.encode(v) or v end
     local config = require('telegram-bot-lua.config')
 
     --- send an invoice to a chat.
@@ -17,15 +15,15 @@ return function(api)
     -- @return string|table the HTTP status or error details
     function api.send_invoice(chat_id, title, description, payload, currency, prices, opts)
         opts = opts or {}
-        prices = type(prices) == 'table' and json.encode(prices) or prices
+        prices = api._json_enc(prices)
         local suggested_tip_amounts = opts.suggested_tip_amounts
-        suggested_tip_amounts = type(suggested_tip_amounts) == 'table' and json.encode(suggested_tip_amounts) or suggested_tip_amounts
+        suggested_tip_amounts = api._json_enc(suggested_tip_amounts)
         local provider_data = opts.provider_data
-        provider_data = type(provider_data) == 'table' and json.encode(provider_data) or provider_data
+        provider_data = api._json_enc(provider_data)
         local reply_parameters = opts.reply_parameters
-        reply_parameters = type(reply_parameters) == 'table' and json.encode(reply_parameters) or reply_parameters
+        reply_parameters = api._json_enc(reply_parameters)
         local reply_markup = opts.reply_markup
-        reply_markup = type(reply_markup) == 'table' and json.encode(reply_markup) or reply_markup
+        reply_markup = api._json_enc(reply_markup)
         local success, res = api.request(config.endpoint .. api.token .. '/sendInvoice', {
             ['chat_id'] = chat_id,
             ['message_thread_id'] = opts.message_thread_id,
@@ -53,7 +51,7 @@ return function(api)
             ['is_flexible'] = opts.is_flexible,
             ['disable_notification'] = opts.disable_notification,
             ['protect_content'] = opts.protect_content,
-            ['suggested_post_parameters'] = json_enc(opts.suggested_post_parameters),
+            ['suggested_post_parameters'] = api._json_enc(opts.suggested_post_parameters),
             ['reply_parameters'] = reply_parameters,
             ['reply_markup'] = reply_markup,
             ['message_effect_id'] = opts.message_effect_id,
@@ -73,11 +71,11 @@ return function(api)
     -- @return string|table the HTTP status or error details
     function api.create_invoice_link(title, description, payload, currency, prices, opts)
         opts = opts or {}
-        prices = type(prices) == 'table' and json.encode(prices) or prices
+        prices = api._json_enc(prices)
         local suggested_tip_amounts = opts.suggested_tip_amounts
-        suggested_tip_amounts = type(suggested_tip_amounts) == 'table' and json.encode(suggested_tip_amounts) or suggested_tip_amounts
+        suggested_tip_amounts = api._json_enc(suggested_tip_amounts)
         local provider_data = opts.provider_data
-        provider_data = type(provider_data) == 'table' and json.encode(provider_data) or provider_data
+        provider_data = api._json_enc(provider_data)
         local success, res = api.request(config.endpoint .. api.token .. '/createInvoiceLink', {
             ['title'] = title,
             ['description'] = description,
@@ -112,7 +110,7 @@ return function(api)
     function api.answer_shipping_query(shipping_query_id, ok, opts)
         opts = opts or {}
         local shipping_options = opts.shipping_options
-        shipping_options = type(shipping_options) == 'table' and json.encode(shipping_options) or shipping_options
+        shipping_options = api._json_enc(shipping_options)
         local error_message = opts.error_message
         if type(ok) == 'boolean' and ok == false and not error_message then
             error_message = 'Unspecified issue occurred! Please contact the person you received this invoice from!'
