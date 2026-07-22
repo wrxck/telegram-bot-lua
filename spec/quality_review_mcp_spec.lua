@@ -36,6 +36,12 @@ describe('quality review: mcp', function()
         assert.is_nil(response:find('"properties":[]', 1, true))
     end)
 
+    it('set_chat_description tool passes the description string, not a table', function()
+        api._clear_requests()
+        api.mcp.handle('{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"set_chat_description","arguments":{"chat_id":"1","description":"hello"}}}')
+        assert.equals('hello', api._last_request().parameters.description)
+    end)
+
     it('ping result encodes as an object', function()
         local response = api.mcp.handle('{"jsonrpc":"2.0","id":7,"method":"ping"}')
         assert.truthy(response:find('"result":{}', 1, true))

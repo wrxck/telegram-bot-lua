@@ -350,9 +350,7 @@ return function(api)
                 required = { 'chat_id' }
             },
             call = function(params)
-                return api.set_chat_description(params.chat_id, {
-                    description = params.description
-                })
+                return api.set_chat_description(params.chat_id, params.description)
             end
         },
         {

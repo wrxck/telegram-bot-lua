@@ -249,6 +249,61 @@ describe('main.lua coverage', function()
             local elapsed = socket.gettime() - before
             assert.truthy(elapsed >= 0.04, 'expected at least ~50ms of sleep, got ' .. elapsed)
         end)
+
+        it('falls back to shelling out when socket.sleep is unavailable', function()
+            local original_require = _G.require
+            local original_execute = os.execute
+            local commands = {}
+            _G.require = function(name)
+                if name == 'socket' then
+                    return {} -- a socket module without .sleep
+                end
+                return original_require(name)
+            end
+            os.execute = function(cmd)
+                table.insert(commands, cmd)
+                return true
+            end
+            finally(function()
+                _G.require = original_require
+                os.execute = original_execute
+            end)
+            api._blocking_sleep(2.7)
+            -- rounded down but never below 1 second
+            assert.same({ 'sleep 2' }, commands)
+        end)
+    end)
+
+    describe('api._request_core connection-failure branch', function()
+        it('returns (false, err) when the http client fails without raising', function()
+            local logged = {}
+            local result, err = api._request_core(function()
+                return nil, 'connection refused'
+            end, function(e) table.insert(logged, e) end, 'https://example.invalid/x', { a = 1 })
+            assert.is_false(result)
+            assert.equals('connection refused', err)
+            assert.same({ 'connection refused' }, logged)
+        end)
+    end)
+
+    describe('api.request retry wiring', function()
+        it('routes requests through _with_retry and _http_request', function()
+            -- the shared test harness replaces api.request with a recording
+            -- mock, so exercise the real function on a fresh module instance.
+            local fresh = dofile('src/main.lua')
+            local calls = {}
+            fresh._http_request = function(endpoint, parameters, file)
+                table.insert(calls, { endpoint = endpoint, parameters = parameters, file = file })
+                return { ok = true, result = 'fresh' }, 200
+            end
+            local result, res = fresh.request('https://example.invalid/method', { a = 1 }, { photo = 'p' })
+            assert.equals('fresh', result.result)
+            assert.equals(200, res)
+            assert.equals(1, #calls)
+            assert.equals('https://example.invalid/method', calls[1].endpoint)
+            assert.same({ a = 1 }, calls[1].parameters)
+            assert.same({ photo = 'p' }, calls[1].file)
+        end)
     end)
 
     describe('api._with_retry', function()

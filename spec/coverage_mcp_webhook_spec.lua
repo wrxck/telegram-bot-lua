@@ -203,6 +203,15 @@ describe('mcp tool dispatch coverage', function()
         assert.is_false(json.decode(req.parameters.permissions).can_send_messages)
     end)
 
+    it('rejects a request that is neither a string nor a table', function()
+        local response = json.decode(api.mcp.handle(42))
+        assert.equals(-32600, response.error.code)
+        assert.equals('Invalid request', response.error.message)
+        -- a JSON body that decodes to a scalar is equally invalid
+        local response2 = json.decode(api.mcp.handle('"just a string"'))
+        assert.equals(-32600, response2.error.code)
+    end)
+
     it('reports INTERNAL_ERROR when a tool raises', function()
         local original_leave_chat = api.leave_chat
         api.leave_chat = function() error('boom from tool') end
@@ -367,6 +376,24 @@ describe('webhook.serve coverage', function()
 
         -- only the single authenticated, well-formed update reached the handler
         assert.same({ 'via webhook' }, seen)
+    end)
+
+    it('enters copas.loop() by default when no_loop is not set', function()
+        local original_loop = copas.loop
+        local loop_entered = 0
+        copas.loop = function() loop_entered = loop_entered + 1 end
+        finally(function()
+            copas.loop = original_loop
+            -- unregister from copas so later copas.loop() calls still terminate
+            if api.webhook._server then
+                pcall(copas.removeserver, api.webhook._server)
+                api.webhook._server = nil
+            end
+        end)
+        local port = free_port()
+        local server = api.webhook.serve({ host = '127.0.0.1', port = port })
+        assert.is_truthy(server)
+        assert.equals(1, loop_entered)
     end)
 
     it('returns false and an error when the port cannot be bound', function()
