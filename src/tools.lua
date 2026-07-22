@@ -66,24 +66,18 @@ function tools.format_time(seconds)
     elseif minutes < 60 then
         return minutes ~= 1 and minutes .. ' minutes' or minutes .. ' minute'
     end
+    -- past this point minutes >= 60, so each larger unit is >= 1 and the
+    -- "== 0" fallbacks the old code carried here were unreachable.
     local hours = math.floor(seconds / 3600)
-    if hours == 0 then
-        return minutes ~= 1 and minutes .. ' minutes' or minutes .. ' minute'
-    elseif hours < 24 then
+    if hours < 24 then
         return hours ~= 1 and hours .. ' hours' or hours .. ' hour'
     end
     local days = math.floor(seconds / 86400)
-    if days == 0 then
-        return hours ~= 1 and hours .. ' hours' or hours .. ' hour'
-    elseif days < 7 then
+    if days < 7 then
         return days ~= 1 and days .. ' days' or days .. ' day'
     end
     local weeks = math.floor(seconds / 604800)
-    if weeks == 0 then
-        return days ~= 1 and days .. ' days' or days .. ' day'
-    else
-        return weeks ~= 1 and weeks .. ' weeks' or weeks .. ' week'
-    end
+    return weeks ~= 1 and weeks .. ' weeks' or weeks .. ' week'
 end
 
 --- round a number to the specified number of decimal places.
