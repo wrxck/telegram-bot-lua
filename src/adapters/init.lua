@@ -32,45 +32,36 @@ return function(api)
         local headers = opts.headers or {}
         local body = opts.body
 
+        -- the two transports share everything but the request function:
+        -- copas.http when async, and scheme-appropriate luasocket otherwise
+        -- (ssl.https cannot speak plain http, so http:// urls must go
+        -- through socket.http).
+        local request_fn
         if api.adapters.is_async() then
-            local copas_http = require('copas.http')
-            local ltn12 = require('ltn12')
-            local response_body = {}
-            local req = {
-                url = url,
-                method = method,
-                headers = headers,
-                sink = ltn12.sink.table(response_body),
-            }
-            if body then
-                req.source = ltn12.source.string(body)
-                headers['Content-Length'] = tostring(#body)
-            end
-            local ok, status_code, resp_headers = copas_http.request(req)
-            if not ok then
-                return nil, status_code
-            end
-            return table.concat(response_body), status_code, resp_headers
+            request_fn = require('copas.http').request
+        elseif url:lower():match('^http://') then
+            request_fn = require('socket.http').request
         else
-            local https = require('ssl.https')
-            local ltn12 = require('ltn12')
-            local response_body = {}
-            local req = {
-                url = url,
-                method = method,
-                headers = headers,
-                sink = ltn12.sink.table(response_body),
-            }
-            if body then
-                req.source = ltn12.source.string(body)
-                headers['Content-Length'] = tostring(#body)
-            end
-            local ok, status_code, resp_headers = https.request(req)
-            if not ok then
-                return nil, status_code
-            end
-            return table.concat(response_body), status_code, resp_headers
+            request_fn = require('ssl.https').request
         end
+
+        local ltn12 = require('ltn12')
+        local response_body = {}
+        local req = {
+            url = url,
+            method = method,
+            headers = headers,
+            sink = ltn12.sink.table(response_body),
+        }
+        if body then
+            req.source = ltn12.source.string(body)
+            headers['Content-Length'] = tostring(#body)
+        end
+        local ok, status_code, resp_headers = request_fn(req)
+        if not ok then
+            return nil, status_code
+        end
+        return table.concat(response_body), status_code, resp_headers
     end
 
     --- create a TCP socket that auto-selects sync or async mode.

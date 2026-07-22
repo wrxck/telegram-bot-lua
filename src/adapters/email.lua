@@ -84,13 +84,25 @@ return function(api)
             local smtp = require('socket.smtp')
             local ltn12 = require('ltn12')
 
-            -- Normalize recipients to table
-            local rcpt = msg.to
-            if type(rcpt) == 'string' then
-                rcpt = { rcpt }
+            -- header values are caller-supplied; strip CR/LF so a crafted
+            -- subject/address cannot inject additional headers (e.g. Bcc).
+            local function header_safe(value)
+                return (tostring(value):gsub('[\r\n]', ' '))
             end
 
-            -- Add CC recipients
+            -- Normalize recipients to a NEW table: aliasing msg.to and
+            -- appending CC entries used to mutate the caller's table and leak
+            -- CC addresses into the To: header.
+            local rcpt = {}
+            if type(msg.to) == 'string' then
+                rcpt[1] = msg.to
+            else
+                for _, addr in ipairs(msg.to) do
+                    rcpt[#rcpt + 1] = addr
+                end
+            end
+
+            -- Add CC recipients (envelope only; the Cc: header is separate)
             if msg.cc then
                 local cc_list = type(msg.cc) == 'string' and { msg.cc } or msg.cc
                 for _, addr in ipairs(cc_list) do
@@ -100,19 +112,39 @@ return function(api)
 
             -- Build headers
             local headers = {
-                ['From'] = msg.from_name and ('"' .. msg.from_name .. '" <' .. msg.from .. '>') or msg.from,
-                ['To'] = type(msg.to) == 'table' and table.concat(msg.to, ', ') or msg.to,
-                ['Subject'] = msg.subject,
+                ['From'] = header_safe(msg.from_name and ('"' .. msg.from_name .. '" <' .. msg.from .. '>') or msg.from),
+                ['To'] = header_safe(type(msg.to) == 'table' and table.concat(msg.to, ', ') or msg.to),
+                ['Subject'] = header_safe(msg.subject),
                 ['Date'] = os.date('!%a, %d %b %Y %H:%M:%S +0000'),
                 ['MIME-Version'] = '1.0',
             }
 
             if msg.cc then
-                headers['Cc'] = type(msg.cc) == 'table' and table.concat(msg.cc, ', ') or msg.cc
+                headers['Cc'] = header_safe(type(msg.cc) == 'table' and table.concat(msg.cc, ', ') or msg.cc)
             end
 
             if msg.reply_to then
-                headers['Reply-To'] = msg.reply_to
+                headers['Reply-To'] = header_safe(msg.reply_to)
+            end
+
+            -- MIME boundaries must not be able to collide with message
+            -- content; hard-coded names could be terminated early by a body
+            -- line that happened to match.
+            local boundary_seq = 0
+            local function unique_boundary(tag)
+                boundary_seq = boundary_seq + 1
+                return string.format('=_%s_%d_%d_%d', tag, os.time(), math.random(1e9), boundary_seq)
+            end
+
+            -- encode content as quoted-printable (with newline normalization)
+            -- so the declared Content-Transfer-Encoding matches what is sent.
+            local function qp_encode(data)
+                local mime = require('mime')
+                local filter = ltn12.filter.chain(mime.normalize(), mime.encode('quoted-printable'))
+                local parts = {}
+                parts[#parts + 1] = filter(data)
+                parts[#parts + 1] = filter(nil) -- flush any buffered tail
+                return table.concat(parts)
             end
 
             -- render the body part as a self-contained mime entity: its own
@@ -120,16 +152,16 @@ return function(api)
             -- the message is sent on its own or nested inside multipart/mixed.
             local function render_body_part()
                 if msg.html and msg.body then
-                    local boundary = 'boundary_alt'
+                    local boundary = unique_boundary('alt')
                     local content_type = 'multipart/alternative; boundary="' .. boundary .. '"'
                     local part = '--' .. boundary .. '\r\n'
                         .. 'Content-Type: text/plain; charset=UTF-8\r\n'
                         .. 'Content-Transfer-Encoding: quoted-printable\r\n\r\n'
-                        .. msg.body .. '\r\n'
+                        .. qp_encode(msg.body) .. '\r\n'
                         .. '--' .. boundary .. '\r\n'
                         .. 'Content-Type: text/html; charset=UTF-8\r\n'
                         .. 'Content-Transfer-Encoding: quoted-printable\r\n\r\n'
-                        .. msg.html .. '\r\n'
+                        .. qp_encode(msg.html) .. '\r\n'
                         .. '--' .. boundary .. '--\r\n'
                     return content_type, part
                 elseif msg.html then
@@ -166,7 +198,7 @@ return function(api)
             local message_source
             if msg.attachments and #msg.attachments > 0 then
                 -- wrap the body part and every attachment in multipart/mixed.
-                local boundary = 'boundary_mixed'
+                local boundary = unique_boundary('mixed')
                 local mixed = '--' .. boundary .. '\r\n'
                     .. 'Content-Type: ' .. body_content_type .. '\r\n\r\n'
                     .. body_part .. '\r\n'
@@ -210,6 +242,10 @@ return function(api)
             if self._tls then
                 -- For STARTTLS on port 587, we need to use the create function
                 local ok_ssl = pcall(require, 'ssl')
+                if not ok_ssl and api.log then
+                    api.log.warn('email: tls requested but the ssl (luasec) module is unavailable; ' ..
+                        'credentials will be sent without STARTTLS')
+                end
                 if ok_ssl then
                     send_params.create = function()
                         local socket_lib = require('socket')

@@ -19,7 +19,6 @@
 
 local poly = require('telegram-bot-lua.polyfill')
 local band, bor, lshift, rshift = poly.band, poly.bor, poly.lshift, poly.rshift
-local tunpack = poly.table_unpack
 
 -- octet -> char encoding
 local encodable = {'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T',
@@ -27,108 +26,94 @@ local encodable = {'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', '
                    'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', '0', '1', '2', '3', '4', '5', '6', '7',
                    '8', '9', '-', '_'}
 
--- char -> octet encoding (offset by 44 from index 1)
-local decodable = {62, 0, 0, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
-                   10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 0, 0, 0, 0, 63, 0, 26, 27, 28, 29,
-                   30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51}
+-- char byte -> 6-bit value, derived from the alphabet above so the two
+-- tables can never drift apart. any byte not in the alphabet maps to nil,
+-- which decode reports as an error instead of raising.
+local decodable = {}
+for index, char in ipairs(encodable) do
+    decodable[char:byte()] = index - 1
+end
 
 --- Encodes a string into a Base64 string.
 function b64url.encode(input)
     local out = {}
+    local len = #input
     local i = 1
-    local bytes = {input:byte(i, #input)}
-    while i <= #bytes - 2 do
-        local buffer = 0
-        local b = lshift(bytes[i], 16)
-        buffer = bor(buffer, band(b, 0xff0000))
-        buffer = bor(buffer, band(lshift(bytes[i + 1], 8), 0xff00))
-        buffer = bor(buffer, band(bytes[i + 2], 0xff))
-        b = band(rshift(buffer, 18), 0x3f)
-        out[#out + 1] = encodable[b + 1]
-        b = band(rshift(buffer, 12), 0x3f)
-        out[#out + 1] = encodable[b + 1]
-        b = band(rshift(buffer, 6), 0x3f)
-        out[#out + 1] = encodable[b + 1]
-        b = band(buffer, 0x3f)
-        out[#out + 1] = encodable[b + 1]
+    -- read three bytes at a time straight from the string; materializing
+    -- the whole byte array via input:byte(1, #input) overflowed the lua
+    -- stack for inputs around 1 MB.
+    while i + 2 <= len do
+        local b1, b2, b3 = input:byte(i, i + 2)
+        local buffer = bor(bor(lshift(b1, 16), lshift(b2, 8)), b3)
+        out[#out + 1] = encodable[band(rshift(buffer, 18), 0x3f) + 1]
+            .. encodable[band(rshift(buffer, 12), 0x3f) + 1]
+            .. encodable[band(rshift(buffer, 6), 0x3f) + 1]
+            .. encodable[band(buffer, 0x3f) + 1]
         i = i + 3
     end
     -- One byte extra: 2 octets.
-    if #bytes % 3 == 1 then
-        local buffer = band(lshift(bytes[i], 16), 0xff0000)
-        local b = band(rshift(buffer, 18), 0x3f)
-        out[#out + 1] = encodable[b + 1]
-        b = band(rshift(buffer, 12), 0x3f)
-        out[#out + 1] = encodable[b + 1]
+    if len % 3 == 1 then
+        local buffer = lshift(input:byte(i), 16)
+        out[#out + 1] = encodable[band(rshift(buffer, 18), 0x3f) + 1]
+            .. encodable[band(rshift(buffer, 12), 0x3f) + 1]
     -- Two bytes extra: 3 octets.
-    elseif #bytes % 3 == 2 then
-        local buffer = 0
-        local b = band(lshift(bytes[i], 16), 0xff0000)
-        buffer = bor(buffer, b)
-        b = band(lshift(bytes[i + 1], 8), 0xff00)
-        buffer = bor(buffer, b)
-        b = band(rshift(buffer, 18), 0x3f)
-        out[#out + 1] = encodable[b + 1]
-        b = band(rshift(buffer, 12), 0x3f)
-        out[#out + 1] = encodable[b + 1]
-        b = band(rshift(buffer, 6), 0x3f)
-        out[#out + 1] = encodable[b + 1]
+    elseif len % 3 == 2 then
+        local b1, b2 = input:byte(i, i + 1)
+        local buffer = bor(lshift(b1, 16), lshift(b2, 8))
+        out[#out + 1] = encodable[band(rshift(buffer, 18), 0x3f) + 1]
+            .. encodable[band(rshift(buffer, 12), 0x3f) + 1]
+            .. encodable[band(rshift(buffer, 6), 0x3f) + 1]
     end
     return table.concat(out)
 end
 
 --- Decodes a Base64 string into an output string of arbitrary bytes.
+-- Accepts padded and unpadded input. Returns nil and an error message for
+-- input containing bytes outside the base64url alphabet or with an
+-- impossible length, rather than raising.
 function b64url.decode(input)
+    -- '=' padding carries no data; strip it rather than decoding it as 0,
+    -- which used to append spurious NUL bytes.
+    input = input:gsub('=+$', '')
+    local len = #input
+    if len % 4 == 1 then
+        return nil, 'invalid base64url input length'
+    end
     local out = {}
     local i = 1
-    while i <= #input - 3 do
-        local b = lshift(decodable[input:byte(i) - 44], 18)
-        local buffer = bor(0, b)
-        i = i + 1
-        b = lshift(decodable[input:byte(i) - 44], 12)
-        buffer = bor(buffer, b)
-        i = i + 1
-        b = lshift(decodable[input:byte(i) - 44], 6)
-        buffer = bor(buffer, b)
-        i = i + 1
-        b = decodable[input:byte(i) - 44]
-        buffer = bor(buffer, b)
-        i = i + 1
-        b = band(rshift(buffer, 16), 0xff)
-        out[#out + 1] = b
-        b = band(rshift(buffer, 8), 0xff)
-        out[#out + 1] = b
-        b = band(buffer, 0xff)
-        out[#out + 1] = b
+    while i + 3 <= len do
+        local c1, c2, c3, c4 = input:byte(i, i + 3)
+        local v1, v2, v3, v4 = decodable[c1], decodable[c2], decodable[c3], decodable[c4]
+        if not (v1 and v2 and v3 and v4) then
+            return nil, 'invalid base64url character'
+        end
+        local buffer = bor(bor(bor(lshift(v1, 18), lshift(v2, 12)), lshift(v3, 6)), v4)
+        out[#out + 1] = string.char(
+            band(rshift(buffer, 16), 0xff),
+            band(rshift(buffer, 8), 0xff),
+            band(buffer, 0xff))
+        i = i + 4
     end
-
     -- 2 octets remain: 1 byte.
-    if #input % 4 == 2 then
-        local buffer = 0
-        local b = lshift(decodable[input:byte(i) - 44], 18)
-        buffer = bor(buffer, b)
-        i = i + 1
-        b = lshift(decodable[input:byte(i) - 44], 12)
-        buffer = bor(buffer, b)
-        b = band(rshift(buffer, 16), 0xff)
-        out[#out + 1] = b
+    if len % 4 == 2 then
+        local v1, v2 = decodable[input:byte(i)], decodable[input:byte(i + 1)]
+        if not (v1 and v2) then
+            return nil, 'invalid base64url character'
+        end
+        local buffer = bor(lshift(v1, 18), lshift(v2, 12))
+        out[#out + 1] = string.char(band(rshift(buffer, 16), 0xff))
     -- 3 octets remain: 2 bytes.
-    elseif #input % 4 == 3 then
-        local buffer = 0
-        local b = lshift(decodable[input:byte(i) - 44], 18)
-        buffer = bor(buffer, b)
-        i = i + 1
-        b = lshift(decodable[input:byte(i) - 44], 12)
-        buffer = bor(buffer, b)
-        i = i + 1
-        b = lshift(decodable[input:byte(i) - 44], 6)
-        buffer = bor(buffer, b)
-        b = band(rshift(buffer, 16), 0xff)
-        out[#out + 1] = b
-        b = band(rshift(buffer, 8), 0xff)
-        out[#out + 1] = b
+    elseif len % 4 == 3 then
+        local v1, v2, v3 = decodable[input:byte(i)], decodable[input:byte(i + 1)], decodable[input:byte(i + 2)]
+        if not (v1 and v2 and v3) then
+            return nil, 'invalid base64url character'
+        end
+        local buffer = bor(bor(lshift(v1, 18), lshift(v2, 12)), lshift(v3, 6))
+        out[#out + 1] = string.char(
+            band(rshift(buffer, 16), 0xff),
+            band(rshift(buffer, 8), 0xff))
     end
-    return string.char(tunpack(out))
+    return table.concat(out)
 end
 
 return b64url
