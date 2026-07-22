@@ -66,24 +66,18 @@ function tools.format_time(seconds)
     elseif minutes < 60 then
         return minutes ~= 1 and minutes .. ' minutes' or minutes .. ' minute'
     end
+    -- past this point minutes >= 60, so each larger unit is >= 1 and the
+    -- "== 0" fallbacks the old code carried here were unreachable.
     local hours = math.floor(seconds / 3600)
-    if hours == 0 then
-        return minutes ~= 1 and minutes .. ' minutes' or minutes .. ' minute'
-    elseif hours < 24 then
+    if hours < 24 then
         return hours ~= 1 and hours .. ' hours' or hours .. ' hour'
     end
     local days = math.floor(seconds / 86400)
-    if days == 0 then
-        return hours ~= 1 and hours .. ' hours' or hours .. ' hour'
-    elseif days < 7 then
+    if days < 7 then
         return days ~= 1 and days .. ' days' or days .. ' day'
     end
     local weeks = math.floor(seconds / 604800)
-    if weeks == 0 then
-        return days ~= 1 and days .. ' days' or days .. ' day'
-    else
-        return weeks ~= 1 and weeks .. ' weeks' or weeks .. ' week'
-    end
+    return weeks ~= 1 and weeks .. ' weeks' or weeks .. ' week'
 end
 
 --- round a number to the specified number of decimal places.
@@ -443,30 +437,29 @@ do
     -- @param amount number optional number of strings to generate
     -- @return string|table a single string if amount is nil, or a table of strings
     function tools.random_string(length, amount)
-        if not length or tonumber(length) <= 0 then
+        length = tonumber(length)
+        if not length or length <= 0 then
             return ''
         end
-        length = tonumber(length)
         if not seeded then
             math.randomseed(os.time() + math.floor(socket.gettime() * 1000) % 1000000)
             seeded = true
         end
+        local function generate()
+            local chars = {}
+            for _ = 1, length do
+                chars[#chars + 1] = tools.random_string_charset[math.random(1, #tools.random_string_charset)]
+            end
+            return table.concat(chars)
+        end
         if amount and tonumber(amount) ~= nil then
             local output = {}
             for _ = 1, tonumber(amount) do
-                local chars = {}
-                for _ = 1, length do
-                    chars[#chars + 1] = tools.random_string_charset[math.random(1, #tools.random_string_charset)]
-                end
-                table.insert(output, table.concat(chars))
+                table.insert(output, generate())
             end
             return output
         end
-        local chars = {}
-        for _ = 1, length do
-            chars[#chars + 1] = tools.random_string_charset[math.random(1, #tools.random_string_charset)]
-        end
-        return table.concat(chars)
+        return generate()
     end
 end
 
@@ -514,8 +507,18 @@ function tools.table_random(tab, seed)
         math.randomseed(seed)
     end
     tab = type(tab) == 'table' and tab or {tostring(tab)}
+    -- weighted map form: { option = chance, ... }. if any value is not a
+    -- number, fall back to picking one of the values with equal probability
+    -- (the plain-array / scalar form used to crash on `total + chance`).
     local total = 0
     for _, chance in pairs(tab) do
+        if type(chance) ~= 'number' then
+            local values = {}
+            for _, value in pairs(tab) do
+                values[#values + 1] = value
+            end
+            return values[math.random(#values)]
+        end
         total = total + chance
     end
     local choice = math.random() * total
@@ -746,9 +749,8 @@ function tools.file_size(file)
         return false, 'No file/path given!'
     elseif type(file) == 'string' then
         is_path = true
-        if not file:match('^/') then
-            file = '/' .. file
-        end
+        -- keep relative paths relative; forcing a leading '/' made every
+        -- relative path unopenable.
         if file:match('/$') then
             file = file:match('^(.-)/$')
         end
@@ -768,18 +770,25 @@ end
 
 function tools.rle_encode(s)
     local new, count = '', 0
+    local function flush()
+        -- runs longer than 255 must be split across multiple markers, and a
+        -- trailing run must be flushed or it is silently dropped.
+        while count > 0 do
+            local chunk = math.min(count, 255)
+            new = new .. string.char(0) .. string.char(chunk)
+            count = count - chunk
+        end
+    end
     for i = 1, #s do
         local current = s:sub(i, i)
         if current == string.char(0) then
             count = count + 1
         else
-            if count > 0 then
-                new = new .. string.char(0) .. string.char(count)
-                count = 0
-            end
+            flush()
             new = new .. current
         end
     end
+    flush()
     return new
 end
 
@@ -806,16 +815,15 @@ function tools.unpack_telegram_invite_link(link)
     elseif link:match('joinchat/') then
         link = link:match('joinchat/(.-)$')
     end
-    local append = ''
-    local amount = (string.len(link) % 4)
-    for _ = 1, amount do
-        append = append .. '='
-    end
-    local decoded = b64url.decode(link .. append)
+    local decoded = b64url.decode(link)
     if not decoded then
         return false, 'Could not decode!'
     end
-    local user_id, chat_id, rand_long = sunpack('>IIL', decoded)
+    -- sunpack raises on payloads shorter than the format requires.
+    local ok, user_id, chat_id, rand_long = pcall(sunpack, '>IIL', decoded)
+    if not ok then
+        return false, 'Could not unpack!'
+    end
     return {
         ['user_id'] = user_id,
         ['chat_id'] = chat_id,
@@ -829,54 +837,58 @@ function tools.unpack_file_id(file_id, media_type)
     elseif not media_type then
         media_type = ''
     end
-    local append = ''
-    local amount = (string.len(file_id) % 4)
-    for _ = 1, amount do
-        append = append .. '='
-    end
-    local decoded = tools.rle_decode(b64url.decode(file_id .. append))
+    local decoded = b64url.decode(file_id)
     if not decoded then
         return false, 'Could not decode!'
     end
-    local file_type = sunpack('<b', decoded)
-    local dc_id = sunpack('<i', decoded:sub(5, 8))
-    local file_flags = sunpack('<i', string.char(0) .. decoded:sub(2, 4))
-    local version = string.byte(decoded:sub(-1))
-    local subversion = (version == 4) and string.byte(decoded:sub(-2, -1)) or 0
-    decoded = decoded:sub(9, -1)
-    local file_reference_flag = lshift(1, 25)
-    if band(file_flags, file_reference_flag) ~= 0 then
-        local file_reference_length = string.byte(decoded:sub(1, 1))
-        local padding
-        decoded = string.char(0) .. decoded:sub(2, -1)
-        if file_reference_length == 254 then
-            file_reference_length = sunpack('<i', decoded)
-            padding = math.abs(-file_reference_length % 4)
-        else
-            padding = math.abs(file_reference_length % -4)
+    decoded = tools.rle_decode(decoded)
+    -- parse under pcall: sunpack raises on payloads shorter than the format
+    -- requires, and this function's contract is (false, err) on bad input.
+    local pok, payload = pcall(function()
+        local file_type = sunpack('<b', decoded)
+        local dc_id = sunpack('<i', decoded:sub(5, 8))
+        local file_flags = sunpack('<i', string.char(0) .. decoded:sub(2, 4))
+        local version = string.byte(decoded:sub(-1))
+        local subversion = (version == 4) and string.byte(decoded:sub(-2, -1)) or 0
+        decoded = decoded:sub(9, -1)
+        local file_reference_flag = lshift(1, 25)
+        if band(file_flags, file_reference_flag) ~= 0 then
+            local file_reference_length = string.byte(decoded:sub(1, 1))
+            local padding
+            decoded = string.char(0) .. decoded:sub(2, -1)
+            if file_reference_length == 254 then
+                file_reference_length = sunpack('<i', decoded)
+                padding = math.abs(-file_reference_length % 4)
+            else
+                padding = math.abs(file_reference_length % -4)
+            end
+            decoded = decoded:sub(file_reference_length + padding + 1, -1)
         end
-        decoded = decoded:sub(file_reference_length + padding + 1, -1)
-    end
-    local user_id, access_hash = sunpack('<ll', decoded)
-    local payload = {
-        ['file_id'] = file_id,
-        ['file_type'] = file_type,
-        ['media_type'] = media_type,
-        ['file_flags'] = file_flags,
-        ['version'] = version,
-        ['subversion'] = subversion,
-        ['dc_id'] = dc_id,
-        ['access_hash'] = access_hash
-    }
-    if media_type == 'photo' then
-        local encrypted_user_id, new_access_hash, volume_id, secret, _, local_id = sunpack('<llllii', decoded)
-        payload.encrypted_user_id = encrypted_user_id
-        payload.access_hash = new_access_hash
-        payload.volume_id = volume_id
-        payload.secret = secret
-        payload.local_id = local_id
-    elseif media_type == 'sticker' then
-        payload.user_id = rshift(user_id, 32)
+        local user_id, access_hash = sunpack('<ll', decoded)
+        local result = {
+            ['file_id'] = file_id,
+            ['file_type'] = file_type,
+            ['media_type'] = media_type,
+            ['file_flags'] = file_flags,
+            ['version'] = version,
+            ['subversion'] = subversion,
+            ['dc_id'] = dc_id,
+            ['access_hash'] = access_hash
+        }
+        if media_type == 'photo' then
+            local encrypted_user_id, new_access_hash, volume_id, secret, _, local_id = sunpack('<llllii', decoded)
+            result.encrypted_user_id = encrypted_user_id
+            result.access_hash = new_access_hash
+            result.volume_id = volume_id
+            result.secret = secret
+            result.local_id = local_id
+        elseif media_type == 'sticker' then
+            result.user_id = rshift(user_id, 32)
+        end
+        return result
+    end)
+    if not pok then
+        return false, 'Could not unpack!'
     end
     return payload
 end
@@ -885,16 +897,17 @@ function tools.unpack_inline_message_id(inline_message_id)
     if not inline_message_id then
         return false, 'No inline_message_id given!'
     end
-    local append = ''
-    local amount = (string.len(inline_message_id) % 4)
-    for _ = 1, amount do
-        append = append .. '='
-    end
-    local decoded = b64url.decode(inline_message_id .. append)
+    local decoded = b64url.decode(inline_message_id)
     if not decoded then
         return false, 'Could not decode!'
     end
-    local dc_id, message_id, chat_id, access_hash = sunpack('<iiI', decoded)
+    -- layout: dc_id:int32, message_id:int32, chat_id:int32, access_hash:int64.
+    -- the old '<iiI' format had only three items, so access_hash silently
+    -- received string.unpack's next-position return value instead of data.
+    local ok, dc_id, message_id, chat_id, access_hash = pcall(sunpack, '<i4i4i4i8', decoded)
+    if not ok then
+        return false, 'Could not unpack!'
+    end
     return {
         ['dc_id'] = dc_id,
         ['message_id'] = message_id,

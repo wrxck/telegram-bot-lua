@@ -1,7 +1,6 @@
 --- bot API methods.
 -- @module telegram-bot-lua.methods.bot
 return function(api)
-    local json = require('dkjson')
     local config = require('telegram-bot-lua.config')
 
     --- get basic info about a file and prepare it for downloading.
@@ -22,9 +21,9 @@ return function(api)
     -- @return table,number the response object and HTTP status
     function api.set_my_commands(commands, opts)
         opts = opts or {}
-        commands = type(commands) == 'table' and json.encode(commands) or commands
+        commands = api._json_enc(commands)
         local scope = opts.scope
-        scope = type(scope) == 'table' and json.encode(scope) or scope
+        scope = api._json_enc(scope)
         local success, res = api.request(config.endpoint .. api.token .. '/setMyCommands', {
             ['commands'] = commands,
             ['scope'] = scope,
@@ -41,7 +40,7 @@ return function(api)
     function api.delete_my_commands(opts)
         opts = opts or {}
         local scope = opts.scope
-        scope = type(scope) == 'table' and json.encode(scope) or scope
+        scope = api._json_enc(scope)
         local success, res = api.request(config.endpoint .. api.token .. '/deleteMyCommands', {
             ['scope'] = scope,
             ['language_code'] = opts.language_code
@@ -57,7 +56,7 @@ return function(api)
     function api.get_my_commands(opts)
         opts = opts or {}
         local scope = opts.scope
-        scope = type(scope) == 'table' and json.encode(scope) or scope
+        scope = api._json_enc(scope)
         local success, res = api.request(config.endpoint .. api.token .. '/getMyCommands', {
             ['scope'] = scope,
             ['language_code'] = opts.language_code
@@ -72,10 +71,7 @@ return function(api)
     -- @return table,number the response object and HTTP status
     function api.set_my_name(name, opts)
         opts = opts or {}
-        name = tostring(name)
-        if name:len() > 64 then
-            name = name:sub(1, 64)
-        end
+        name = api._truncate(name, 64)
         local success, res = api.request(config.endpoint .. api.token .. '/setMyName', {
             ['name'] = name,
             ['language_code'] = opts.language_code
@@ -102,10 +98,7 @@ return function(api)
     -- @return table,number the response object and HTTP status
     function api.set_my_description(description, opts)
         opts = opts or {}
-        description = tostring(description)
-        if description:len() > 512 then
-            description = description:sub(1, 512)
-        end
+        description = api._truncate(description, 512)
         local success, res = api.request(config.endpoint .. api.token .. '/setMyDescription', {
             ['description'] = description,
             ['language_code'] = opts.language_code
@@ -132,10 +125,7 @@ return function(api)
     -- @return table,number the response object and HTTP status
     function api.set_my_short_description(short_description, opts)
         opts = opts or {}
-        short_description = tostring(short_description)
-        if short_description:len() > 120 then
-            short_description = short_description:sub(1, 120)
-        end
+        short_description = api._truncate(short_description, 120)
         local success, res = api.request(config.endpoint .. api.token .. '/setMyShortDescription', {
             ['short_description'] = short_description,
             ['language_code'] = opts.language_code
@@ -163,7 +153,7 @@ return function(api)
     function api.set_chat_menu_button(opts)
         opts = opts or {}
         local menu_button = opts.menu_button
-        menu_button = type(menu_button) == 'table' and json.encode(menu_button) or menu_button
+        menu_button = api._json_enc(menu_button)
         local success, res = api.request(config.endpoint .. api.token .. '/setChatMenuButton', {
             ['chat_id'] = opts.chat_id,
             ['menu_button'] = menu_button
@@ -191,7 +181,7 @@ return function(api)
     function api.set_my_default_administrator_rights(opts)
         opts = opts or {}
         local rights = opts.rights
-        rights = type(rights) == 'table' and json.encode(rights) or rights
+        rights = api._json_enc(rights)
         local success, res = api.request(config.endpoint .. api.token .. '/setMyDefaultAdministratorRights', {
             ['rights'] = rights,
             ['for_channels'] = opts.for_channels
@@ -263,7 +253,7 @@ return function(api)
     -- @param button table|string a JSON-serialized keyboard button to save
     -- @return table,number the response object and HTTP status
     function api.save_prepared_keyboard_button(user_id, button)
-        button = type(button) == 'table' and json.encode(button) or button
+        button = api._json_enc(button)
         local success, res = api.request(config.endpoint .. api.token .. '/savePreparedKeyboardButton', {
             ['user_id'] = user_id,
             ['button'] = button
@@ -290,7 +280,7 @@ return function(api)
     function api.set_managed_bot_access_settings(user_id, is_access_restricted, opts)
         opts = opts or {}
         local added_user_ids = opts.added_user_ids
-        added_user_ids = type(added_user_ids) == 'table' and json.encode(added_user_ids) or added_user_ids
+        added_user_ids = api._json_enc(added_user_ids)
         local success, res = api.request(config.endpoint .. api.token .. '/setManagedBotAccessSettings', {
             ['user_id'] = user_id,
             ['is_access_restricted'] = is_access_restricted,

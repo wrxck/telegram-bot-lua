@@ -5,7 +5,6 @@
 -- is configured.
 -- @module telegram-bot-lua.webhook
 return function(api)
-    local json = require('dkjson')
     api.webhook = {}
 
     -- all-bytes comparison (no early exit) to avoid leaking the secret via timing.
@@ -41,7 +40,7 @@ return function(api)
         if not api.webhook.verify_secret(opts.received_secret, opts.secret_token) then
             return false, 'invalid secret token'
         end
-        local update = type(body) == 'table' and body or json.decode(body or '')
+        local update = type(body) == 'table' and body or api._json_decode(body or '')
         if type(update) ~= 'table' then
             return false, 'invalid update payload'
         end
@@ -62,7 +61,7 @@ return function(api)
         if not api.webhook.verify_secret(headers['x-telegram-bot-api-secret-token'], opts.secret_token) then
             return 401, 'invalid secret token'
         end
-        local update = json.decode(body or '')
+        local update = api._json_decode(body or '')
         if type(update) ~= 'table' then
             return 400, 'invalid payload'
         end

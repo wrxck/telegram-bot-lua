@@ -11,9 +11,10 @@ return function(api)
         if not chat_id or not user_id then
             return false
         end
-        local success = api.get_chat_member(chat_id, user_id)
+        -- preserve the error detail on failure, like the other helpers do.
+        local success, res = api.get_chat_member(chat_id, user_id)
         if not success then
-            return success
+            return success, res
         end
         local p = success.result
         return {
@@ -46,93 +47,55 @@ return function(api)
         }
     end
 
+    -- factory for the status-check helpers below: each differs only in the
+    -- set of chat-member statuses it accepts.
+    local function status_check(statuses)
+        return function(chat_id, user_id)
+            if not chat_id or not user_id then
+                return false
+            end
+            local user, res = api.get_chat_member(chat_id, user_id)
+            if not user or not user.result then
+                return false, res
+            elseif statuses[user.result.status] then
+                return true, res
+            end
+            return false, user.result.status
+        end
+    end
+
     --- check if a user has been kicked (banned) from a chat.
     -- @param chat_id number|string unique identifier for the target chat
     -- @param user_id number unique identifier of the target user
     -- @return boolean true if the user is kicked
     -- @return string|number the HTTP status or the user's actual status
-    function api.is_user_kicked(chat_id, user_id)
-        if not chat_id or not user_id then
-            return false
-        end
-        local user, res = api.get_chat_member(chat_id, user_id)
-        if not user or not user.result then
-            return false, res
-        elseif user.result.status == 'kicked' then
-            return true, res
-        end
-        return false, user.result.status
-    end
+    api.is_user_kicked = status_check({ kicked = true })
 
     --- check if a user is an administrator or creator in a chat.
     -- @param chat_id number|string unique identifier for the target chat
     -- @param user_id number unique identifier of the target user
     -- @return boolean true if the user is an admin or creator
     -- @return string|number the HTTP status or the user's actual status
-    function api.is_user_group_admin(chat_id, user_id)
-        if not chat_id or not user_id then
-            return false
-        end
-        local user, res = api.get_chat_member(chat_id, user_id)
-        if not user or not user.result then
-            return false, res
-        elseif user.result.status == 'administrator' or user.result.status == 'creator' then
-            return true, res
-        end
-        return false, user.result.status
-    end
+    api.is_user_group_admin = status_check({ administrator = true, creator = true })
 
     --- check if a user is the creator of a chat.
     -- @param chat_id number|string unique identifier for the target chat
     -- @param user_id number unique identifier of the target user
     -- @return boolean true if the user is the creator
     -- @return string|number the HTTP status or the user's actual status
-    function api.is_user_group_creator(chat_id, user_id)
-        if not chat_id or not user_id then
-            return false
-        end
-        local user, res = api.get_chat_member(chat_id, user_id)
-        if not user or not user.result then
-            return false, res
-        elseif user.result.status == 'creator' then
-            return true, res
-        end
-        return false, user.result.status
-    end
+    api.is_user_group_creator = status_check({ creator = true })
 
     --- check if a user is restricted in a chat.
     -- @param chat_id number|string unique identifier for the target chat
     -- @param user_id number unique identifier of the target user
     -- @return boolean true if the user is restricted
     -- @return string|number the HTTP status or the user's actual status
-    function api.is_user_restricted(chat_id, user_id)
-        if not chat_id or not user_id then
-            return false
-        end
-        local user, res = api.get_chat_member(chat_id, user_id)
-        if not user or not user.result then
-            return false, res
-        elseif user.result.status == 'restricted' then
-            return true, res
-        end
-        return false, user.result.status
-    end
+    api.is_user_restricted = status_check({ restricted = true })
 
     --- check if a user has left a chat.
     -- @param chat_id number|string unique identifier for the target chat
     -- @param user_id number unique identifier of the target user
     -- @return boolean true if the user has left
     -- @return string|number the HTTP status or the user's actual status
-    function api.has_user_left(chat_id, user_id)
-        if not chat_id or not user_id then
-            return false
-        end
-        local user, res = api.get_chat_member(chat_id, user_id)
-        if not user or not user.result then
-            return false, res
-        elseif user.result.status == 'left' then
-            return true, res
-        end
-        return false, user.result.status
-    end
+    api.has_user_left = status_check({ left = true })
 end

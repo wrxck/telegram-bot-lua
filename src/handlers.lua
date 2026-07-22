@@ -2,6 +2,21 @@
 -- @module telegram-bot-lua.handlers
 return function(api)
 
+    -- canonical ordered list of update payload fields, in dispatch priority
+    -- order. shared by the dispatcher below, the middleware context builder
+    -- and the framework context builder so every layer agrees on which
+    -- update types exist.
+    api._update_types = {
+        'message', 'edited_message', 'callback_query', 'inline_query',
+        'channel_post', 'edited_channel_post', 'chosen_inline_result',
+        'shipping_query', 'pre_checkout_query', 'poll', 'poll_answer',
+        'message_reaction', 'message_reaction_count', 'my_chat_member',
+        'chat_member', 'chat_join_request', 'chat_boost', 'removed_chat_boost',
+        'business_connection', 'business_message', 'edited_business_message',
+        'deleted_business_messages', 'purchased_paid_media', 'managed_bot',
+        'guest_message'
+    }
+
     --- @section update handler stubs
     -- override these functions to handle specific update types.
     -- each receives the relevant update object as its only argument.
@@ -103,6 +118,21 @@ return function(api)
     -- @param guest_message table the guest message update object
     function api.on_guest_message(_) end
 
+    -- chat-type-specific handlers invoked before the general handler for
+    -- message-like updates.
+    local chat_scoped_handlers = {
+        message = {
+            private = 'on_private_message',
+            group = 'on_group_message',
+            supergroup = 'on_supergroup_message'
+        },
+        edited_message = {
+            private = 'on_edited_private_message',
+            group = 'on_edited_group_message',
+            supergroup = 'on_edited_supergroup_message'
+        }
+    }
+
     --- raw dispatch: routes an update directly to the appropriate handler.
     -- called by the middleware chain as the final step, or directly when
     -- no middleware is registered.
@@ -115,70 +145,18 @@ return function(api)
         if api._framework_handle and api._framework_handle(update) then
             return true
         end
-        if update.message then
-            if update.message.chat.type == 'private' then
-                api.on_private_message(update.message)
-            elseif update.message.chat.type == 'group' then
-                api.on_group_message(update.message)
-            elseif update.message.chat.type == 'supergroup' then
-                api.on_supergroup_message(update.message)
+        for _, utype in ipairs(api._update_types) do
+            local payload = update[utype]
+            if payload then
+                local scoped = chat_scoped_handlers[utype]
+                if scoped and payload.chat then
+                    local scoped_handler = scoped[payload.chat.type]
+                    if scoped_handler then
+                        api[scoped_handler](payload)
+                    end
+                end
+                return api['on_' .. utype](payload)
             end
-            return api.on_message(update.message)
-        elseif update.edited_message then
-            if update.edited_message.chat.type == 'private' then
-                api.on_edited_private_message(update.edited_message)
-            elseif update.edited_message.chat.type == 'group' then
-                api.on_edited_group_message(update.edited_message)
-            elseif update.edited_message.chat.type == 'supergroup' then
-                api.on_edited_supergroup_message(update.edited_message)
-            end
-            return api.on_edited_message(update.edited_message)
-        elseif update.callback_query then
-            return api.on_callback_query(update.callback_query)
-        elseif update.inline_query then
-            return api.on_inline_query(update.inline_query)
-        elseif update.channel_post then
-            return api.on_channel_post(update.channel_post)
-        elseif update.edited_channel_post then
-            return api.on_edited_channel_post(update.edited_channel_post)
-        elseif update.chosen_inline_result then
-            return api.on_chosen_inline_result(update.chosen_inline_result)
-        elseif update.shipping_query then
-            return api.on_shipping_query(update.shipping_query)
-        elseif update.pre_checkout_query then
-            return api.on_pre_checkout_query(update.pre_checkout_query)
-        elseif update.poll then
-            return api.on_poll(update.poll)
-        elseif update.poll_answer then
-            return api.on_poll_answer(update.poll_answer)
-        elseif update.message_reaction then
-            return api.on_message_reaction(update.message_reaction)
-        elseif update.message_reaction_count then
-            return api.on_message_reaction_count(update.message_reaction_count)
-        elseif update.my_chat_member then
-            return api.on_my_chat_member(update.my_chat_member)
-        elseif update.chat_member then
-            return api.on_chat_member(update.chat_member)
-        elseif update.chat_join_request then
-            return api.on_chat_join_request(update.chat_join_request)
-        elseif update.chat_boost then
-            return api.on_chat_boost(update.chat_boost)
-        elseif update.removed_chat_boost then
-            return api.on_removed_chat_boost(update.removed_chat_boost)
-        elseif update.business_connection then
-            return api.on_business_connection(update.business_connection)
-        elseif update.business_message then
-            return api.on_business_message(update.business_message)
-        elseif update.edited_business_message then
-            return api.on_edited_business_message(update.edited_business_message)
-        elseif update.deleted_business_messages then
-            return api.on_deleted_business_messages(update.deleted_business_messages)
-        elseif update.purchased_paid_media then
-            return api.on_purchased_paid_media(update.purchased_paid_media)
-        elseif update.managed_bot then
-            return api.on_managed_bot(update.managed_bot)
-        elseif update.guest_message then
-            return api.on_guest_message(update.guest_message)
         end
         return false
     end
@@ -234,16 +212,9 @@ return function(api)
         local backoff = 1
         local max_backoff = 30
         -- sleeper is injectable so tests can fast-forward backoff without
-        -- the loop actually sleeping. defaults to a real wall-clock sleep
-        -- using socket.select (avoids spawning a shell, unlike os.execute).
-        local sleeper = opts._sleeper or function(seconds)
-            local ok, socket = pcall(require, 'socket')
-            if ok and socket and socket.sleep then
-                socket.sleep(seconds)
-            else
-                os.execute('sleep ' .. tostring(math.max(1, math.floor(seconds))))
-            end
-        end
+        -- the loop actually sleeping. defaults to the shared blocking sleep
+        -- (socket.sleep when available; avoids spawning a shell).
+        local sleeper = opts._sleeper or api._blocking_sleep
         while api._sync_running do
             local pok, updates, perr = pcall(api.get_updates, {
                 timeout = timeout,

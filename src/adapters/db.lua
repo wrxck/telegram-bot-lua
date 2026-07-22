@@ -31,6 +31,46 @@
 return function(api)
     api.db = {}
 
+    -- transaction helpers shared by both drivers, built on conn:execute.
+    -- begin/commit failures are surfaced instead of ignored: a failed BEGIN
+    -- (e.g. a transaction is already open) used to let the inner
+    -- commit/rollback silently terminate the caller's outer transaction.
+    local function attach_transaction_helpers(conn)
+        function conn:begin()
+            return self:execute('BEGIN')
+        end
+
+        function conn:commit()
+            return self:execute('COMMIT')
+        end
+
+        function conn:rollback()
+            return self:execute('ROLLBACK')
+        end
+
+        function conn:transaction(fn)
+            local began, begin_err = self:begin()
+            if not began then
+                return false, tostring(begin_err)
+            end
+            local tx_ok, tx_err = pcall(fn, self)
+            if tx_ok then
+                local committed, commit_err = self:commit()
+                if not committed then
+                    self:rollback()
+                    return false, tostring(commit_err)
+                end
+                return true
+            end
+            self:rollback()
+            return false, tx_err
+        end
+
+        function conn:is_connected()
+            return self._handle ~= nil
+        end
+    end
+
     --- create a database connection.
     -- @param opts table connection options
     -- @param opts.driver string database driver: 'sqlite' or 'postgres'
@@ -99,14 +139,21 @@ return function(api)
         end
 
         -- fetch a compiled statement for sql, preferring the cache. a cached
-        -- statement is reset before reuse so prior execution state never leaks
-        -- into the next call; callers always re-bind the full parameter set for
-        -- a given sql string, so bindings stay correct. returns (stmt) or
-        -- (nil, errmsg).
+        -- statement is reset before reuse, and its bindings are cleared:
+        -- sqlite3_reset does not clear bindings, so a later call with fewer
+        -- (or no) parameters would otherwise silently reuse the previous
+        -- call's values. returns (stmt) or (nil, errmsg).
         local function get_stmt(self, sql)
             local cached = self._stmt_cache[sql]
             if cached then
                 cached:reset()
+                if cached.clear_bindings then
+                    cached:clear_bindings()
+                else
+                    for i = 1, cached:bind_parameter_count() do
+                        cached:bind(i, nil)
+                    end
+                end
                 return cached
             end
             local stmt = self._handle:prepare(sql)
@@ -127,7 +174,13 @@ return function(api)
                 return false, prep_err
             end
             if params then
-                stmt:bind_values((table.unpack or unpack)(params))
+                -- bind_values raises on a parameter-count mismatch; this
+                -- method's contract is (false, err).
+                local bind_ok, bind_err = pcall(stmt.bind_values, stmt, (table.unpack or unpack)(params))
+                if not bind_ok then
+                    stmt:reset()
+                    return false, tostring(bind_err)
+                end
             end
             local result = stmt:step()
             -- reset (not finalise) so the cached statement is reusable.
@@ -147,7 +200,11 @@ return function(api)
                 return nil, prep_err
             end
             if params then
-                stmt:bind_values((table.unpack or unpack)(params))
+                local bind_ok, bind_err = pcall(stmt.bind_values, stmt, (table.unpack or unpack)(params))
+                if not bind_ok then
+                    stmt:reset()
+                    return nil, tostring(bind_err)
+                end
             end
             local rows = {}
             for row in stmt:nrows() do
@@ -166,34 +223,7 @@ return function(api)
             end
         end
 
-        function conn:is_connected()
-            return self._handle ~= nil
-        end
-
-        -- Transaction helpers
-        function conn:begin()
-            return self:execute('BEGIN')
-        end
-
-        function conn:commit()
-            return self:execute('COMMIT')
-        end
-
-        function conn:rollback()
-            return self:execute('ROLLBACK')
-        end
-
-        function conn:transaction(fn)
-            self:begin()
-            local tx_ok, tx_err = pcall(fn, self)
-            if tx_ok then
-                self:commit()
-                return true
-            else
-                self:rollback()
-                return false, tx_err
-            end
-        end
+        attach_transaction_helpers(conn)
 
         return conn
     end
@@ -246,20 +276,56 @@ return function(api)
             end
         end
 
-        -- Replace ? placeholders with escaped values
+        -- Replace ? placeholders with escaped values. quote-aware: a literal
+        -- '?' inside a single-quoted string (with '' escapes) is left alone,
+        -- and running out of parameters is an error rather than a silent
+        -- NULL, both of which used to corrupt the query.
         local function interpolate(pg_handle, sql, params)
             if not params or #params == 0 then
                 return sql
             end
+            local out = {}
             local idx = 0
-            return sql:gsub('%?', function()
-                idx = idx + 1
-                return escape_param(pg_handle, params[idx])
-            end)
+            local i = 1
+            local len = #sql
+            while i <= len do
+                local char = sql:sub(i, i)
+                if char == "'" then
+                    -- copy the quoted literal verbatim, honouring '' escapes
+                    local j = i + 1
+                    while j <= len do
+                        if sql:sub(j, j) == "'" then
+                            if sql:sub(j + 1, j + 1) == "'" then
+                                j = j + 2
+                            else
+                                break
+                            end
+                        else
+                            j = j + 1
+                        end
+                    end
+                    out[#out + 1] = sql:sub(i, j)
+                    i = j + 1
+                elseif char == '?' then
+                    idx = idx + 1
+                    if idx > #params then
+                        return nil, 'missing parameter #' .. idx .. ' for sql placeholder'
+                    end
+                    out[#out + 1] = escape_param(pg_handle, params[idx])
+                    i = i + 1
+                else
+                    out[#out + 1] = char
+                    i = i + 1
+                end
+            end
+            return table.concat(out)
         end
 
         function conn:execute(sql, params)
-            local query_str = interpolate(self._handle, sql, params)
+            local query_str, interp_err = interpolate(self._handle, sql, params)
+            if not query_str then
+                return false, interp_err
+            end
             local result, err = self._handle:query(query_str)
             if not result then
                 return false, err
@@ -268,7 +334,10 @@ return function(api)
         end
 
         function conn:query(sql, params)
-            local query_str = interpolate(self._handle, sql, params)
+            local query_str, interp_err = interpolate(self._handle, sql, params)
+            if not query_str then
+                return nil, interp_err
+            end
             local result, err = self._handle:query(query_str)
             if not result then
                 return nil, err
@@ -287,33 +356,7 @@ return function(api)
             end
         end
 
-        function conn:is_connected()
-            return self._handle ~= nil
-        end
-
-        function conn:begin()
-            return self:execute('BEGIN')
-        end
-
-        function conn:commit()
-            return self:execute('COMMIT')
-        end
-
-        function conn:rollback()
-            return self:execute('ROLLBACK')
-        end
-
-        function conn:transaction(fn)
-            self:begin()
-            local tx_ok, tx_err = pcall(fn, self)
-            if tx_ok then
-                self:commit()
-                return true
-            else
-                self:rollback()
-                return false, tx_err
-            end
-        end
+        attach_transaction_helpers(conn)
 
         return conn
     end

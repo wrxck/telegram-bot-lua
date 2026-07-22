@@ -1,7 +1,6 @@
 --- chat API methods.
 -- @module telegram-bot-lua.methods.chat
 return function(api)
-    local json = require('dkjson')
     local config = require('telegram-bot-lua.config')
 
     --- get up-to-date information about the chat.
@@ -65,10 +64,7 @@ return function(api)
     -- @param title string new chat title (max 128 characters)
     -- @return table,number the response object and HTTP status
     function api.set_chat_title(chat_id, title)
-        title = tostring(title)
-        if title:len() > 128 then
-            title = title:sub(1, 128)
-        end
+        title = api._truncate(title, 128)
         local success, res = api.request(config.endpoint .. api.token .. '/setChatTitle', {
             ['chat_id'] = chat_id,
             ['title'] = title
@@ -81,10 +77,7 @@ return function(api)
     -- @param description string new chat description (max 255 characters)
     -- @return table,number the response object and HTTP status
     function api.set_chat_description(chat_id, description)
-        description = tostring(description)
-        if description:len() > 255 then
-            description = description:sub(1, 255)
-        end
+        description = api._truncate(description, 255)
         local success, res = api.request(config.endpoint .. api.token .. '/setChatDescription', {
             ['chat_id'] = chat_id,
             ['description'] = description
@@ -123,7 +116,7 @@ return function(api)
     -- @return table,number the response object and HTTP status
     function api.set_chat_permissions(chat_id, permissions, opts)
         opts = opts or {}
-        permissions = type(permissions) == 'table' and json.encode(permissions) or permissions
+        permissions = api._json_enc(permissions)
         local success, res = api.request(config.endpoint .. api.token .. '/setChatPermissions', {
             ['chat_id'] = chat_id,
             ['permissions'] = permissions,

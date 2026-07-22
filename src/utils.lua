@@ -63,8 +63,13 @@ return function(api)
             end
             return '<pre>' .. tools.escape_html(text) .. '</pre>'
         end
+        -- inside markdown code entities, backticks and backslashes must be
+        -- escaped or they break out of / corrupt the entity (same hazard as
+        -- fmt.code); the language tag additionally must not contain newlines.
         local fence = '```'
-        return fence .. (language or '') .. '\n' .. text .. '\n' .. fence
+        local escaped = tostring(text):gsub('([`\\])', '\\%1')
+        local lang = language and tostring(language):gsub('[`\\\n]', '') or ''
+        return fence .. lang .. '\n' .. escaped .. '\n' .. fence
     end
 
     --- format text as a hyperlink.
@@ -130,9 +135,11 @@ return function(api)
         if parse_mode:lower() == 'html' then
             return '<blockquote>' .. tools.escape_html(text) .. '</blockquote>'
         end
+        -- escape each quoted line like the other markdown fmt helpers do;
+        -- unescaped special characters are invalid MarkdownV2.
         local lines = {}
         for line in (text .. '\n'):gmatch('(.-)\n') do
-            lines[#lines + 1] = '>' .. line
+            lines[#lines + 1] = '>' .. tools.escape_markdown_v2(line)
         end
         return table.concat(lines, '\n')
     end
@@ -148,14 +155,16 @@ return function(api)
         if not text then
             return false
         end
-        local cmd, bot_username = text:match('^[/!#](%w+)@(%w+)')
+        -- commands and bot usernames may legally contain underscores, which
+        -- %w does not match.
+        local cmd, bot_username = text:match('^[/!#]([%w_]+)@([%w_]+)')
         if not cmd then
-            cmd = text:match('^[/!#](%w+)')
+            cmd = text:match('^[/!#]([%w_]+)')
         end
         if not cmd then
             return false
         end
-        local args_str = text:match('^[/!#]%w+@?%w*%s+(.+)$')
+        local args_str = text:match('^[/!#][%w_]+@?[%w_]*%s+(.+)$')
         local args = {}
         if args_str then
             for word in args_str:gmatch('%S+') do
@@ -282,7 +291,10 @@ return function(api)
     -- @return number|nil the page number
     function api.parse_page_callback(data, callback_prefix)
         callback_prefix = callback_prefix or 'page'
-        local page = data:match('^' .. callback_prefix .. ':(%d+)$')
+        -- paginate builds callback data by plain concatenation, so the prefix
+        -- must be matched literally, not as a lua pattern.
+        local escaped_prefix = callback_prefix:gsub('(%W)', '%%%1')
+        local page = data:match('^' .. escaped_prefix .. ':(%d+)$')
         return page and tonumber(page) or nil
     end
 

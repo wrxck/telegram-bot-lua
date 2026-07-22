@@ -5,11 +5,13 @@ return function(api)
 
     api.mcp = {}
 
-    -- JSON-RPC 2.0 helpers
+    -- JSON-RPC 2.0 helpers. the id member is REQUIRED in responses; when the
+    -- request id is unknown (e.g. a parse error) it must be present as null,
+    -- so a nil id maps to json.null rather than being dropped by the encoder.
     local function jsonrpc_result(id, result)
         return json.encode({
             jsonrpc = '2.0',
-            id = id,
+            id = id == nil and json.null or id,
             result = result
         })
     end
@@ -17,13 +19,20 @@ return function(api)
     local function jsonrpc_error(id, code, message, data)
         return json.encode({
             jsonrpc = '2.0',
-            id = id,
+            id = id == nil and json.null or id,
             error = {
                 code = code,
                 message = message,
                 data = data
             }
         })
+    end
+
+    -- mark a table so dkjson encodes it as a JSON object even when empty
+    -- (MCP capability values and JSON Schema `properties` must be objects,
+    -- but dkjson encodes a bare empty lua table as []).
+    local function json_object(t)
+        return setmetatable(t, { ['__jsontype'] = 'object' })
     end
 
     -- MCP protocol error codes
@@ -100,7 +109,7 @@ return function(api)
             description = 'Get basic info about the bot',
             inputSchema = {
                 type = 'object',
-                properties = {}
+                properties = json_object({})
             },
             call = function(_)
                 return api.get_me()
@@ -341,9 +350,7 @@ return function(api)
                 required = { 'chat_id' }
             },
             call = function(params)
-                return api.set_chat_description(params.chat_id, {
-                    description = params.description
-                })
+                return api.set_chat_description(params.chat_id, params.description)
             end
         },
         {
@@ -472,19 +479,22 @@ return function(api)
             return jsonrpc_error(id, INVALID_REQUEST, 'Invalid request: missing method')
         end
 
-        -- Notifications (no id) — acknowledge silently
-        if id == nil and (method == 'notifications/initialized' or method:match('^notifications/')) then
+        -- Notifications (no id) — a JSON-RPC request without an id is a
+        -- notification and MUST NOT be answered, whatever its method.
+        if id == nil then
             return nil
         end
 
-        local params = request.params or {}
+        -- params must be a table; a scalar params member is malformed and
+        -- must not crash the handler with an index error.
+        local params = type(request.params) == 'table' and request.params or {}
 
         if method == 'initialize' then
             return jsonrpc_result(id, {
                 protocolVersion = PROTOCOL_VERSION,
                 capabilities = {
-                    tools = {},
-                    resources = {}
+                    tools = json_object({}),
+                    resources = json_object({})
                 },
                 serverInfo = {
                     name = 'telegram-bot-lua',
@@ -576,7 +586,7 @@ return function(api)
             return jsonrpc_error(id, METHOD_NOT_FOUND, 'Resource not found: ' .. uri)
 
         elseif method == 'ping' then
-            return jsonrpc_result(id, {})
+            return jsonrpc_result(id, json_object({}))
 
         else
             return jsonrpc_error(id, METHOD_NOT_FOUND, 'Method not found: ' .. method)

@@ -4,3 +4,6 @@
 *.src.rock
 luacov.stats.out
 luacov.report.out
+dump.rdb
+luacov.stats.out
+luacov.report.out

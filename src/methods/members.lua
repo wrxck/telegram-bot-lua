@@ -1,7 +1,6 @@
 --- members API methods.
 -- @module telegram-bot-lua.methods.members
 return function(api)
-    local json = require('dkjson')
     local config = require('telegram-bot-lua.config')
 
     --- ban a user from a chat.
@@ -48,7 +47,7 @@ return function(api)
     -- @return table,number the response object and HTTP status
     function api.restrict_chat_member(chat_id, user_id, permissions, opts)
         opts = opts or {}
-        permissions = type(permissions) == 'table' and json.encode(permissions) or permissions
+        permissions = api._json_enc(permissions)
         local success, res = api.request(config.endpoint .. api.token .. '/restrictChatMember', {
             ['chat_id'] = chat_id,
             ['user_id'] = user_id,
@@ -101,10 +100,7 @@ return function(api)
     -- @param custom_title string new custom title for the administrator (max 16 characters)
     -- @return table,number the response object and HTTP status
     function api.set_chat_administrator_custom_title(chat_id, user_id, custom_title)
-        custom_title = tostring(custom_title)
-        if custom_title:len() > 16 then
-            custom_title = custom_title:sub(1, 16)
-        end
+        custom_title = api._truncate(custom_title, 16)
         local success, res = api.request(config.endpoint .. api.token .. '/setChatAdministratorCustomTitle', {
             ['chat_id'] = chat_id,
             ['user_id'] = user_id,

@@ -3,6 +3,13 @@
 return function(api)
     local json = require('dkjson')
 
+    -- mark a table as a JSON object so dkjson encodes it as {} even when all
+    -- its fields are optional and absent (a bare empty lua table would
+    -- otherwise serialize as [], which telegram rejects for object types).
+    local function json_object(t)
+        return setmetatable(t, { ['__jsontype'] = 'object' })
+    end
+
     -- keyboard builders
 
     api.keyboard_meta = {}
@@ -116,7 +123,7 @@ return function(api)
 
     --- create a row of inline keyboard buttons with a chainable builder pattern.
     -- @return table a row object with metatable for chaining button additions
-    function api.row(_)
+    function api.row()
         return setmetatable({}, api.row_meta)
     end
 
@@ -207,9 +214,20 @@ return function(api)
         if not text or not callback_game then
             return false
         end
+        -- a CallbackGame table must be passed through intact; only scalars
+        -- are stringified. CallbackGame is an empty placeholder object, so an
+        -- empty table gets the object hint to avoid encoding as [].
+        local game = callback_game
+        if type(game) == 'table' then
+            if next(game) == nil and getmetatable(game) == nil then
+                game = json_object({})
+            end
+        else
+            game = tostring(game)
+        end
         local button = {
             ['text'] = tostring(text),
-            ['callback_game'] = tostring(callback_game)
+            ['callback_game'] = game
         }
         if encoded then
             button = json.encode(button)
@@ -310,9 +328,9 @@ return function(api)
     function api.keyboard_button_request_poll(text, poll_type)
         return {
             ['text'] = text,
-            ['request_poll'] = {
+            ['request_poll'] = json_object({
                 ['type'] = poll_type
-            }
+            })
         }
     end
 
@@ -773,25 +791,26 @@ return function(api)
     end
 
     function api.input_media_meta:video(media, caption, width, height, duration)
+        -- coerce dimensions like the standalone input_media_video builder.
         table.insert(self, {
             ['type'] = 'video',
             ['media'] = tostring(media),
             ['caption'] = caption,
-            ['width'] = width,
-            ['height'] = height,
-            ['duration'] = duration
+            ['width'] = tonumber(width),
+            ['height'] = tonumber(height),
+            ['duration'] = tonumber(duration)
         })
         return self
     end
 
-    function api.input_media(_)
+    function api.input_media()
         return setmetatable({}, api.input_media_meta)
     end
 
     -- Input message content constructors
 
     function api.input_text_message_content(message_text, parse_mode, link_preview_options, encoded)
-        parse_mode = (type(parse_mode) == 'boolean' and parse_mode == true) and 'MarkdownV2' or parse_mode
+        parse_mode = api._normalize_parse_mode(parse_mode)
         local input_message_content = {
             ['message_text'] = tostring(message_text),
             ['parse_mode'] = parse_mode,
@@ -837,208 +856,50 @@ return function(api)
     api.inline_result_meta = {}
     api.inline_result_meta.__index = api.inline_result_meta
 
-    function api.inline_result_meta:type(type)
-        self['type'] = tostring(type)
-        return self
+    -- the inline-result setters are uniform three-liners differing only in
+    -- their coercion, so they are generated from field lists: string fields
+    -- are tostring'd, numeric fields tonumber'd, raw fields stored as given.
+    local inline_result_fields = {
+        string = {
+            'type', 'title', 'url', 'description', 'thumbnail_url',
+            'photo_url', 'caption', 'gif_url', 'mpeg4_url', 'video_url',
+            'mime_type', 'audio_url', 'performer', 'voice_url',
+            'document_url', 'address', 'foursquare_id', 'phone_number',
+            'first_name', 'last_name', 'game_short_name'
+        },
+        number = {
+            'thumbnail_width', 'thumbnail_height', 'photo_width',
+            'photo_height', 'gif_width', 'gif_height', 'mpeg4_width',
+            'mpeg4_height', 'video_width', 'video_height', 'video_duration',
+            'audio_duration', 'voice_duration', 'latitude', 'longitude',
+            'live_period'
+        },
+        raw = { 'input_message_content', 'reply_markup' }
+    }
+    local inline_result_coerce = {
+        string = tostring,
+        number = tonumber,
+        raw = function(value) return value end
+    }
+    for kind, fields in pairs(inline_result_fields) do
+        local coerce = inline_result_coerce[kind]
+        for _, field in ipairs(fields) do
+            api.inline_result_meta[field] = function(self, value)
+                self[field] = coerce(value)
+                return self
+            end
+        end
     end
 
+    -- id defaults to '1' and hide_url normalizes nil to false, so these two
+    -- keep bespoke setters.
     function api.inline_result_meta:id(id)
         self['id'] = id and tostring(id) or '1'
         return self
     end
 
-    function api.inline_result_meta:title(title)
-        self['title'] = tostring(title)
-        return self
-    end
-
-    function api.inline_result_meta:input_message_content(input_message_content)
-        self['input_message_content'] = input_message_content
-        return self
-    end
-
-    function api.inline_result_meta:reply_markup(reply_markup)
-        self['reply_markup'] = reply_markup
-        return self
-    end
-
-    function api.inline_result_meta:url(url)
-        self['url'] = tostring(url)
-        return self
-    end
-
     function api.inline_result_meta:hide_url(hide_url)
         self['hide_url'] = hide_url or false
-        return self
-    end
-
-    function api.inline_result_meta:description(description)
-        self['description'] = tostring(description)
-        return self
-    end
-
-    function api.inline_result_meta:thumbnail_url(thumbnail_url)
-        self['thumbnail_url'] = tostring(thumbnail_url)
-        return self
-    end
-
-    function api.inline_result_meta:thumbnail_width(thumbnail_width)
-        self['thumbnail_width'] = tonumber(thumbnail_width)
-        return self
-    end
-
-    function api.inline_result_meta:thumbnail_height(thumbnail_height)
-        self['thumbnail_height'] = tonumber(thumbnail_height)
-        return self
-    end
-
-    function api.inline_result_meta:photo_url(photo_url)
-        self['photo_url'] = tostring(photo_url)
-        return self
-    end
-
-    function api.inline_result_meta:photo_width(photo_width)
-        self['photo_width'] = tonumber(photo_width)
-        return self
-    end
-
-    function api.inline_result_meta:photo_height(photo_height)
-        self['photo_height'] = tonumber(photo_height)
-        return self
-    end
-
-    function api.inline_result_meta:caption(caption)
-        self['caption'] = tostring(caption)
-        return self
-    end
-
-    function api.inline_result_meta:gif_url(gif_url)
-        self['gif_url'] = tostring(gif_url)
-        return self
-    end
-
-    function api.inline_result_meta:gif_width(gif_width)
-        self['gif_width'] = tonumber(gif_width)
-        return self
-    end
-
-    function api.inline_result_meta:gif_height(gif_height)
-        self['gif_height'] = tonumber(gif_height)
-        return self
-    end
-
-    function api.inline_result_meta:mpeg4_url(mpeg4_url)
-        self['mpeg4_url'] = tostring(mpeg4_url)
-        return self
-    end
-
-    function api.inline_result_meta:mpeg4_width(mpeg4_width)
-        self['mpeg4_width'] = tonumber(mpeg4_width)
-        return self
-    end
-
-    function api.inline_result_meta:mpeg4_height(mpeg4_height)
-        self['mpeg4_height'] = tonumber(mpeg4_height)
-        return self
-    end
-
-    function api.inline_result_meta:video_url(video_url)
-        self['video_url'] = tostring(video_url)
-        return self
-    end
-
-    function api.inline_result_meta:mime_type(mime_type)
-        self['mime_type'] = tostring(mime_type)
-        return self
-    end
-
-    function api.inline_result_meta:video_width(video_width)
-        self['video_width'] = tonumber(video_width)
-        return self
-    end
-
-    function api.inline_result_meta:video_height(video_height)
-        self['video_height'] = tonumber(video_height)
-        return self
-    end
-
-    function api.inline_result_meta:video_duration(video_duration)
-        self['video_duration'] = tonumber(video_duration)
-        return self
-    end
-
-    function api.inline_result_meta:audio_url(audio_url)
-        self['audio_url'] = tostring(audio_url)
-        return self
-    end
-
-    function api.inline_result_meta:performer(performer)
-        self['performer'] = tostring(performer)
-        return self
-    end
-
-    function api.inline_result_meta:audio_duration(audio_duration)
-        self['audio_duration'] = tonumber(audio_duration)
-        return self
-    end
-
-    function api.inline_result_meta:voice_url(voice_url)
-        self['voice_url'] = tostring(voice_url)
-        return self
-    end
-
-    function api.inline_result_meta:voice_duration(voice_duration)
-        self['voice_duration'] = tonumber(voice_duration)
-        return self
-    end
-
-    function api.inline_result_meta:document_url(document_url)
-        self['document_url'] = tostring(document_url)
-        return self
-    end
-
-    function api.inline_result_meta:latitude(latitude)
-        self['latitude'] = tonumber(latitude)
-        return self
-    end
-
-    function api.inline_result_meta:longitude(longitude)
-        self['longitude'] = tonumber(longitude)
-        return self
-    end
-
-    function api.inline_result_meta:live_period(live_period)
-        self['live_period'] = tonumber(live_period)
-        return self
-    end
-
-    function api.inline_result_meta:address(address)
-        self['address'] = tostring(address)
-        return self
-    end
-
-    function api.inline_result_meta:foursquare_id(foursquare_id)
-        self['foursquare_id'] = tostring(foursquare_id)
-        return self
-    end
-
-    function api.inline_result_meta:phone_number(phone_number)
-        self['phone_number'] = tostring(phone_number)
-        return self
-    end
-
-    function api.inline_result_meta:first_name(first_name)
-        self['first_name'] = tostring(first_name)
-        return self
-    end
-
-    function api.inline_result_meta:last_name(last_name)
-        self['last_name'] = tostring(last_name)
-        return self
-    end
-
-    function api.inline_result_meta:game_short_name(game_short_name)
-        self['game_short_name'] = tostring(game_short_name)
         return self
     end
 
@@ -1050,7 +911,7 @@ return function(api)
 
     function api.chat_permissions(opts)
         opts = opts or {}
-        return {
+        return json_object({
             ['can_send_messages'] = opts.can_send_messages,
             ['can_send_audios'] = opts.can_send_audios,
             ['can_send_documents'] = opts.can_send_documents,
@@ -1066,14 +927,14 @@ return function(api)
             ['can_pin_messages'] = opts.can_pin_messages,
             ['can_manage_topics'] = opts.can_manage_topics,
             ['can_edit_tag'] = opts.can_edit_tag
-        }
+        })
     end
 
     -- Chat administrator rights constructor
 
     function api.chat_administrator_rights(opts)
         opts = opts or {}
-        return {
+        return json_object({
             ['is_anonymous'] = opts.is_anonymous,
             ['can_manage_chat'] = opts.can_manage_chat,
             ['can_delete_messages'] = opts.can_delete_messages,
@@ -1091,7 +952,7 @@ return function(api)
             ['can_manage_topics'] = opts.can_manage_topics,
             ['can_manage_direct_messages'] = opts.can_manage_direct_messages,
             ['can_manage_tags'] = opts.can_manage_tags
-        }
+        })
     end
 
     -- Bot command constructors
@@ -1168,21 +1029,25 @@ return function(api)
     -- Message entity
 
     function api.message_entity(entity_type, offset, length, url, user, language, custom_emoji_id)
+        -- optional fields must stay nil when absent; unconditional tostring
+        -- would send the literal string "nil" to telegram.
         return {
             ['type'] = tostring(entity_type),
             ['offset'] = tonumber(offset),
             ['length'] = tonumber(length),
-            ['url'] = tostring(url),
+            ['url'] = url ~= nil and tostring(url) or nil,
             ['user'] = type(user) == 'table' and user or nil,
-            ['language'] = tostring(language),
-            ['custom_emoji_id'] = tostring(custom_emoji_id)
+            ['language'] = language ~= nil and tostring(language) or nil,
+            ['custom_emoji_id'] = custom_emoji_id ~= nil and tostring(custom_emoji_id) or nil
         }
     end
 
     -- Reply parameters
 
     function api.reply_parameters(message_id, chat_id, allow_sending_without_reply, quote, quote_parse_mode, quote_entities, quote_position, opts)
-        quote_entities = type(quote_entities) == 'table' and json.encode(quote_entities) or quote_entities
+        -- quote_entities stays a table: consumers json-encode the whole
+        -- reply_parameters object, so pre-encoding here double-encoded it
+        -- into a JSON string on the wire.
         opts = opts or {}
         return {
             ['message_id'] = tonumber(message_id),
@@ -1244,23 +1109,23 @@ return function(api)
 
     function api.accepted_gift_types(opts)
         opts = opts or {}
-        return {
+        return json_object({
             ['unlimited_gifts'] = opts.unlimited_gifts,
             ['limited_gifts'] = opts.limited_gifts,
             ['unique_gifts'] = opts.unique_gifts,
             ['premium_subscription'] = opts.premium_subscription,
             ['gifts_from_channels'] = opts.gifts_from_channels
-        }
+        })
     end
 
     -- Suggested post parameters
 
     function api.suggested_post_parameters(opts)
         opts = opts or {}
-        return {
+        return json_object({
             ['star_count'] = opts.star_count,
             ['pay_for_sponsored_message'] = opts.pay_for_sponsored_message
-        }
+        })
     end
 
     -- Passport element error constructors

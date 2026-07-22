@@ -34,6 +34,7 @@
 <h2>Contents</h2>
 <ul>
 <li><a href="#Functions">Functions</a></li>
+<li><a href="#Fields">Fields</a></li>
 </ul>
 
 
@@ -101,24 +102,27 @@
 	<td class="name" nowrap><a href="#api.get_chat_member_permissions">api.get_chat_member_permissions(chat_id, user_id)</a></td>
 	<td class="summary">get the permissions of a chat member as a normalised table.</td>
 	</tr>
+</table>
+<h2><a href="#Fields">Fields</a></h2>
+<table class="function_list">
 	<tr>
-	<td class="name" nowrap><a href="#api.has_user_left">api.has_user_left(chat_id, user_id)</a></td>
+	<td class="name" nowrap><a href="#api.has_user_left">api.has_user_left</a></td>
 	<td class="summary">check if a user has left a chat.</td>
 	</tr>
 	<tr>
-	<td class="name" nowrap><a href="#api.is_user_group_admin">api.is_user_group_admin(chat_id, user_id)</a></td>
+	<td class="name" nowrap><a href="#api.is_user_group_admin">api.is_user_group_admin</a></td>
 	<td class="summary">check if a user is an administrator or creator in a chat.</td>
 	</tr>
 	<tr>
-	<td class="name" nowrap><a href="#api.is_user_group_creator">api.is_user_group_creator(chat_id, user_id)</a></td>
+	<td class="name" nowrap><a href="#api.is_user_group_creator">api.is_user_group_creator</a></td>
 	<td class="summary">check if a user is the creator of a chat.</td>
 	</tr>
 	<tr>
-	<td class="name" nowrap><a href="#api.is_user_kicked">api.is_user_kicked(chat_id, user_id)</a></td>
+	<td class="name" nowrap><a href="#api.is_user_kicked">api.is_user_kicked</a></td>
 	<td class="summary">check if a user has been kicked (banned) from a chat.</td>
 	</tr>
 	<tr>
-	<td class="name" nowrap><a href="#api.is_user_restricted">api.is_user_restricted(chat_id, user_id)</a></td>
+	<td class="name" nowrap><a href="#api.is_user_restricted">api.is_user_restricted</a></td>
 	<td class="summary">check if a user is restricted in a chat.</td>
 	</tr>
 </table>
@@ -159,15 +163,18 @@
 
 
 </dd>
+</dl>
+    <h2 class="section-header "><a name="Fields"></a>Fields</h2>
+
+    <dl class="function">
     <dt>
     <a name = "api.has_user_left"></a>
-    <strong>api.has_user_left(chat_id, user_id)</strong>
+    <strong>api.has_user_left</strong>
     </dt>
     <dd>
     check if a user has left a chat.
 
 
-    <h3>Parameters:</h3>
     <ul>
         <li><span class="parameter">chat_id</span>
          number|string unique identifier for the target chat
@@ -177,13 +184,6 @@
         </li>
     </ul>
 
-    <h3>Returns:</h3>
-    <ol>
-        <li>
-        boolean true if the user has left</li>
-        <li>
-        string|number the HTTP status or the user's actual status</li>
-    </ol>
 
 
 
@@ -191,13 +191,12 @@
 </dd>
     <dt>
     <a name = "api.is_user_group_admin"></a>
-    <strong>api.is_user_group_admin(chat_id, user_id)</strong>
+    <strong>api.is_user_group_admin</strong>
     </dt>
     <dd>
     check if a user is an administrator or creator in a chat.
 
 
-    <h3>Parameters:</h3>
     <ul>
         <li><span class="parameter">chat_id</span>
          number|string unique identifier for the target chat
@@ -207,13 +206,6 @@
         </li>
     </ul>
 
-    <h3>Returns:</h3>
-    <ol>
-        <li>
-        boolean true if the user is an admin or creator</li>
-        <li>
-        string|number the HTTP status or the user's actual status</li>
-    </ol>
 
 
 
@@ -221,13 +213,12 @@
 </dd>
     <dt>
     <a name = "api.is_user_group_creator"></a>
-    <strong>api.is_user_group_creator(chat_id, user_id)</strong>
+    <strong>api.is_user_group_creator</strong>
     </dt>
     <dd>
     check if a user is the creator of a chat.
 
 
-    <h3>Parameters:</h3>
     <ul>
         <li><span class="parameter">chat_id</span>
          number|string unique identifier for the target chat
@@ -237,13 +228,6 @@
         </li>
     </ul>
 
-    <h3>Returns:</h3>
-    <ol>
-        <li>
-        boolean true if the user is the creator</li>
-        <li>
-        string|number the HTTP status or the user's actual status</li>
-    </ol>
 
 
 
@@ -251,13 +235,12 @@
 </dd>
     <dt>
     <a name = "api.is_user_kicked"></a>
-    <strong>api.is_user_kicked(chat_id, user_id)</strong>
+    <strong>api.is_user_kicked</strong>
     </dt>
     <dd>
     check if a user has been kicked (banned) from a chat.
 
 
-    <h3>Parameters:</h3>
     <ul>
         <li><span class="parameter">chat_id</span>
          number|string unique identifier for the target chat
@@ -267,13 +250,6 @@
         </li>
     </ul>
 
-    <h3>Returns:</h3>
-    <ol>
-        <li>
-        boolean true if the user is kicked</li>
-        <li>
-        string|number the HTTP status or the user's actual status</li>
-    </ol>
 
 
 
@@ -281,13 +257,12 @@
 </dd>
     <dt>
     <a name = "api.is_user_restricted"></a>
-    <strong>api.is_user_restricted(chat_id, user_id)</strong>
+    <strong>api.is_user_restricted</strong>
     </dt>
     <dd>
     check if a user is restricted in a chat.
 
 
-    <h3>Parameters:</h3>
     <ul>
         <li><span class="parameter">chat_id</span>
          number|string unique identifier for the target chat
@@ -297,13 +272,6 @@
         </li>
     </ul>
 
-    <h3>Returns:</h3>
-    <ol>
-        <li>
-        boolean true if the user is restricted</li>
-        <li>
-        string|number the HTTP status or the user's actual status</li>
-    </ol>
 
 
 
@@ -316,7 +284,7 @@
 </div> <!-- id="main" -->
 <div id="about">
 <i>generated by <a href="http://github.com/lunarmodules/LDoc">LDoc 1.5.0</a></i>
-<i style="float:right;">Last updated 2026-06-22 21:59:03 </i>
+<i style="float:right;">Last updated 2026-07-22 16:40:50 </i>
 </div> <!-- id="about" -->
 </div> <!-- id="container" -->
 </body>

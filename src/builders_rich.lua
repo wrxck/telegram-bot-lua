@@ -9,12 +9,14 @@ return function(api)
     --- InputRichMessage; supply exactly one of opts.html or opts.markdown.
     function api.input_rich_message(opts)
         opts = opts or {}
-        return {
+        -- all fields are optional; the __jsontype hint keeps an empty result
+        -- encoding as a JSON object rather than [].
+        return setmetatable({
             ['html'] = opts.html,
             ['markdown'] = opts.markdown,
             ['is_rtl'] = opts.is_rtl,
             ['skip_entity_detection'] = opts.skip_entity_detection
-        }
+        }, { ['__jsontype'] = 'object' })
     end
 
     --- wrap an InputRichMessage for inline/guest/web app query results.

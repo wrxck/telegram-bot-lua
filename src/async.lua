@@ -29,93 +29,26 @@
 return function(api)
     local copas = require('copas')
     local copas_http = require('copas.http')
-    local ltn12 = require('ltn12')
-    local multipart = require('multipart-post')
-    local json = require('dkjson')
 
     api.async = {}
     api.async._running = false
 
     --- non-blocking HTTP request using copas.
     -- has the same signature as api.request but uses copas.http.
+    -- delegates to the shared request core in main.lua; copas wraps socket
+    -- ops in copas.try and raises on conditions like 'wantread' or
+    -- 'unexpected eof while reading' when the telegram server closes the
+    -- long-poll connection at the exact timeout boundary, and the core's
+    -- pcall keeps those errors from escaping the coroutine and crashing the
+    -- bot. cf. issue #46.
     -- @param endpoint string the full API endpoint URL
     -- @param parameters table optional request parameters
     -- @param file table optional file upload map
     -- @return table decoded JSON response, or false on error
     function api.async._http_request(endpoint, parameters, file)
-        assert(endpoint, 'You must specify an endpoint to make this request to!')
-        parameters = parameters or {}
-        -- shallow copy so the caller's table is never mutated; stringify
-        -- scalars for multipart, leave tables (file parts) untouched.
-        local params = {}
-        for k, v in pairs(parameters) do
-            params[k] = type(v) == 'table' and v or tostring(v)
-        end
-        parameters = params
-        if api.debug then
-            local safe = {}
-            for k, v in pairs(parameters) do safe[k] = v end
-            local output = json.encode(safe, { ['indent'] = true })
-            print(output)
-        end
-        -- iterate every file part (mirrors the sync path); next(file) alone
-        -- would only handle the first key and silently drop e.g. a thumbnail.
-        if file then
-            for file_type, file_name in pairs(file) do
-                if type(file_name) == 'string' then
-                    local file_res = io.open(file_name, 'rb')
-                    if file_res then
-                        parameters[file_type] = {
-                            filename = file_name,
-                            data = file_res:read('*a')
-                        }
-                        file_res:close()
-                    else
-                        parameters[file_type] = file_name
-                    end
-                else
-                    parameters[file_type] = file_name
-                end
-            end
-        end
-        parameters = next(parameters) == nil and {''} or parameters
-        local response = {}
-        local body, boundary = multipart.encode(parameters)
-        -- copas wraps socket ops in copas.try and raises on conditions like
-        -- 'wantread' or 'unexpected eof while reading' when the telegram
-        -- server closes the long-poll connection at the exact timeout
-        -- boundary. without pcall those errors escape the coroutine, kill
-        -- the polling thread, and crash the bot. cf. issue #46.
-        local pok, success, res = pcall(copas_http.request, {
-            ['url'] = endpoint,
-            ['method'] = 'POST',
-            ['headers'] = {
-                ['Content-Type'] = 'multipart/form-data; boundary=' .. boundary,
-                ['Content-Length'] = #body
-            },
-            ['source'] = ltn12.source.string(body),
-            ['sink'] = ltn12.sink.table(response)
-        })
-        if not pok then
-            print('Connection error [' .. tostring(success) .. ']')
-            return false, success
-        end
-        if not success then
-            print('Connection error [' .. tostring(res) .. ']')
-            return false, res
-        end
-        local jstr = table.concat(response)
-        local jdat = json.decode(jstr)
-        if not jdat then
-            return false, { ['ok'] = false, ['description'] = 'failed to decode API response', ['body'] = jstr }
-        elseif not jdat.ok then
-            if api.debug then
-                local output = '\n' .. tostring(jdat.description) .. ' [' .. tostring(jdat.error_code) .. ']\n'
-                print(output)
-            end
-            return false, jdat
-        end
-        return jdat, res
+        return api._request_core(copas_http.request, function(err)
+            print('Connection error [' .. tostring(err) .. ']')
+        end, endpoint, parameters, file)
     end
 
     --- send an async request under the shared retry policy (api.retry).

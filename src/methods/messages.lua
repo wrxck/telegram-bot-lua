@@ -1,8 +1,6 @@
 --- messages API methods.
 -- @module telegram-bot-lua.methods.messages
 return function(api)
-    local json = require('dkjson')
-    local function json_enc(v) return type(v) == 'table' and json.encode(v) or v end
     local config = require('telegram-bot-lua.config')
 
     --- send a text message to a chat.
@@ -20,16 +18,16 @@ return function(api)
     function api.send_message(chat_id, text, opts)
         opts = opts or {}
         local entities = opts.entities
-        entities = type(entities) == 'table' and json.encode(entities) or entities
+        entities = api._json_enc(entities)
         local link_preview_options = opts.link_preview_options
-        link_preview_options = type(link_preview_options) == 'table' and json.encode(link_preview_options) or link_preview_options
+        link_preview_options = api._json_enc(link_preview_options)
         local reply_parameters = opts.reply_parameters
-        reply_parameters = type(reply_parameters) == 'table' and json.encode(reply_parameters) or reply_parameters
+        reply_parameters = api._json_enc(reply_parameters)
         local reply_markup = opts.reply_markup
-        reply_markup = type(reply_markup) == 'table' and json.encode(reply_markup) or reply_markup
+        reply_markup = api._json_enc(reply_markup)
         chat_id = (type(chat_id) == 'table' and chat_id.chat and chat_id.chat.id) and chat_id.chat.id or chat_id
         local parse_mode = opts.parse_mode
-        parse_mode = (type(parse_mode) == 'boolean' and parse_mode == true) and 'MarkdownV2' or parse_mode
+        parse_mode = api._normalize_parse_mode(parse_mode)
         local success, res = api.request(config.endpoint .. api.token .. '/sendMessage', {
             ['chat_id'] = chat_id,
             ['message_thread_id'] = opts.message_thread_id,
@@ -40,7 +38,7 @@ return function(api)
             ['link_preview_options'] = link_preview_options,
             ['disable_notification'] = opts.disable_notification,
             ['protect_content'] = opts.protect_content,
-            ['suggested_post_parameters'] = json_enc(opts.suggested_post_parameters),
+            ['suggested_post_parameters'] = api._json_enc(opts.suggested_post_parameters),
             ['reply_parameters'] = reply_parameters,
             ['reply_markup'] = reply_markup,
             ['business_connection_id'] = opts.business_connection_id,
@@ -66,32 +64,18 @@ return function(api)
             return false
         end
         opts = opts or {}
-        local reply_markup = opts.reply_markup
-        reply_markup = type(reply_markup) == 'table' and json.encode(reply_markup) or reply_markup
-        local parse_mode = opts.parse_mode
-        parse_mode = (type(parse_mode) == 'boolean' and parse_mode == true) and 'MarkdownV2' or parse_mode
-        local reply_parameters = opts.reply_parameters
-        if not reply_parameters then
-            reply_parameters = api.reply_parameters(message.message_id, message.chat.id, true)
+        -- delegate to send_message so the two parameter sets cannot drift;
+        -- inject reply_parameters derived from the message unless the caller
+        -- supplied their own. work on a copy so the caller's opts table is
+        -- never mutated.
+        local merged = {}
+        for k, v in pairs(opts) do
+            merged[k] = v
         end
-        reply_parameters = type(reply_parameters) == 'table' and json.encode(reply_parameters) or reply_parameters
-        local entities = opts.entities
-        entities = type(entities) == 'table' and json.encode(entities) or entities
-        local link_preview_options = opts.link_preview_options
-        link_preview_options = type(link_preview_options) == 'table' and json.encode(link_preview_options) or link_preview_options
-        local success, res = api.request(config.endpoint .. api.token .. '/sendMessage', {
-            ['chat_id'] = message.chat.id,
-            ['message_thread_id'] = opts.message_thread_id,
-            ['text'] = text,
-            ['parse_mode'] = parse_mode,
-            ['entities'] = entities,
-            ['link_preview_options'] = link_preview_options,
-            ['disable_notification'] = opts.disable_notification,
-            ['protect_content'] = opts.protect_content,
-            ['reply_parameters'] = reply_parameters,
-            ['reply_markup'] = reply_markup
-        })
-        return success, res
+        if not merged.reply_parameters then
+            merged.reply_parameters = api.reply_parameters(message.message_id, message.chat.id, true)
+        end
+        return api.send_message(message.chat.id, text, merged)
     end
 
     --- forward a message from one chat to another.
@@ -112,7 +96,7 @@ return function(api)
             ['from_chat_id'] = from_chat_id,
             ['disable_notification'] = opts.disable_notification,
             ['protect_content'] = opts.protect_content,
-            ['suggested_post_parameters'] = json_enc(opts.suggested_post_parameters),
+            ['suggested_post_parameters'] = api._json_enc(opts.suggested_post_parameters),
             ['message_id'] = message_id
         })
         return success, res
@@ -129,7 +113,7 @@ return function(api)
     -- @return table,number the response object and HTTP status
     function api.forward_messages(chat_id, from_chat_id, message_ids, opts)
         opts = opts or {}
-        message_ids = type(message_ids) == 'table' and json.encode(message_ids) or message_ids
+        message_ids = api._json_enc(message_ids)
         local success, res = api.request(config.endpoint .. api.token .. '/forwardMessages', {
             ['chat_id'] = chat_id,
             ['message_thread_id'] = opts.message_thread_id,
@@ -156,11 +140,11 @@ return function(api)
     function api.copy_message(chat_id, from_chat_id, message_id, opts)
         opts = opts or {}
         local caption_entities = opts.caption_entities
-        caption_entities = type(caption_entities) == 'table' and json.encode(caption_entities) or caption_entities
+        caption_entities = api._json_enc(caption_entities)
         local reply_parameters = opts.reply_parameters
-        reply_parameters = type(reply_parameters) == 'table' and json.encode(reply_parameters) or reply_parameters
+        reply_parameters = api._json_enc(reply_parameters)
         local reply_markup = opts.reply_markup
-        reply_markup = type(reply_markup) == 'table' and json.encode(reply_markup) or reply_markup
+        reply_markup = api._json_enc(reply_markup)
         local success, res = api.request(config.endpoint .. api.token .. '/copyMessage', {
             ['chat_id'] = chat_id,
             ['message_thread_id'] = opts.message_thread_id,
@@ -173,7 +157,7 @@ return function(api)
             ['show_caption_above_media'] = opts.show_caption_above_media,
             ['disable_notification'] = opts.disable_notification,
             ['protect_content'] = opts.protect_content,
-            ['suggested_post_parameters'] = json_enc(opts.suggested_post_parameters),
+            ['suggested_post_parameters'] = api._json_enc(opts.suggested_post_parameters),
             ['reply_parameters'] = reply_parameters,
             ['reply_markup'] = reply_markup
         })
@@ -192,7 +176,7 @@ return function(api)
     -- @return table,number the response object and HTTP status
     function api.copy_messages(chat_id, from_chat_id, message_ids, opts)
         opts = opts or {}
-        message_ids = type(message_ids) == 'table' and json.encode(message_ids) or message_ids
+        message_ids = api._json_enc(message_ids)
         local success, res = api.request(config.endpoint .. api.token .. '/copyMessages', {
             ['chat_id'] = chat_id,
             ['message_thread_id'] = opts.message_thread_id,
@@ -220,11 +204,11 @@ return function(api)
     function api.send_photo(chat_id, photo, opts)
         opts = opts or {}
         local caption_entities = opts.caption_entities
-        caption_entities = type(caption_entities) == 'table' and json.encode(caption_entities) or caption_entities
+        caption_entities = api._json_enc(caption_entities)
         local reply_parameters = opts.reply_parameters
-        reply_parameters = type(reply_parameters) == 'table' and json.encode(reply_parameters) or reply_parameters
+        reply_parameters = api._json_enc(reply_parameters)
         local reply_markup = opts.reply_markup
-        reply_markup = type(reply_markup) == 'table' and json.encode(reply_markup) or reply_markup
+        reply_markup = api._json_enc(reply_markup)
         local success, res = api.request(config.endpoint .. api.token .. '/sendPhoto', {
             ['chat_id'] = chat_id,
             ['message_thread_id'] = opts.message_thread_id,
@@ -236,7 +220,7 @@ return function(api)
             ['has_spoiler'] = opts.has_spoiler,
             ['disable_notification'] = opts.disable_notification,
             ['protect_content'] = opts.protect_content,
-            ['suggested_post_parameters'] = json_enc(opts.suggested_post_parameters),
+            ['suggested_post_parameters'] = api._json_enc(opts.suggested_post_parameters),
             ['reply_parameters'] = reply_parameters,
             ['reply_markup'] = reply_markup,
             ['business_connection_id'] = opts.business_connection_id,
@@ -264,13 +248,13 @@ return function(api)
     function api.send_live_photo(chat_id, live_photo, photo, opts)
         opts = opts or {}
         local caption_entities = opts.caption_entities
-        caption_entities = type(caption_entities) == 'table' and json.encode(caption_entities) or caption_entities
+        caption_entities = api._json_enc(caption_entities)
         local suggested_post_parameters = opts.suggested_post_parameters
-        suggested_post_parameters = type(suggested_post_parameters) == 'table' and json.encode(suggested_post_parameters) or suggested_post_parameters
+        suggested_post_parameters = api._json_enc(suggested_post_parameters)
         local reply_parameters = opts.reply_parameters
-        reply_parameters = type(reply_parameters) == 'table' and json.encode(reply_parameters) or reply_parameters
+        reply_parameters = api._json_enc(reply_parameters)
         local reply_markup = opts.reply_markup
-        reply_markup = type(reply_markup) == 'table' and json.encode(reply_markup) or reply_markup
+        reply_markup = api._json_enc(reply_markup)
         local success, res = api.request(config.endpoint .. api.token .. '/sendLivePhoto', {
             ['business_connection_id'] = opts.business_connection_id,
             ['chat_id'] = chat_id,
@@ -312,11 +296,11 @@ return function(api)
     function api.send_audio(chat_id, audio, opts)
         opts = opts or {}
         local caption_entities = opts.caption_entities
-        caption_entities = type(caption_entities) == 'table' and json.encode(caption_entities) or caption_entities
+        caption_entities = api._json_enc(caption_entities)
         local reply_parameters = opts.reply_parameters
-        reply_parameters = type(reply_parameters) == 'table' and json.encode(reply_parameters) or reply_parameters
+        reply_parameters = api._json_enc(reply_parameters)
         local reply_markup = opts.reply_markup
-        reply_markup = type(reply_markup) == 'table' and json.encode(reply_markup) or reply_markup
+        reply_markup = api._json_enc(reply_markup)
         local success, res = api.request(config.endpoint .. api.token .. '/sendAudio', {
             ['chat_id'] = chat_id,
             ['message_thread_id'] = opts.message_thread_id,
@@ -329,7 +313,7 @@ return function(api)
             ['title'] = opts.title,
             ['disable_notification'] = opts.disable_notification,
             ['protect_content'] = opts.protect_content,
-            ['suggested_post_parameters'] = json_enc(opts.suggested_post_parameters),
+            ['suggested_post_parameters'] = api._json_enc(opts.suggested_post_parameters),
             ['reply_parameters'] = reply_parameters,
             ['reply_markup'] = reply_markup,
             ['business_connection_id'] = opts.business_connection_id,
@@ -357,11 +341,11 @@ return function(api)
     function api.send_document(chat_id, document, opts)
         opts = opts or {}
         local caption_entities = opts.caption_entities
-        caption_entities = type(caption_entities) == 'table' and json.encode(caption_entities) or caption_entities
+        caption_entities = api._json_enc(caption_entities)
         local reply_parameters = opts.reply_parameters
-        reply_parameters = type(reply_parameters) == 'table' and json.encode(reply_parameters) or reply_parameters
+        reply_parameters = api._json_enc(reply_parameters)
         local reply_markup = opts.reply_markup
-        reply_markup = type(reply_markup) == 'table' and json.encode(reply_markup) or reply_markup
+        reply_markup = api._json_enc(reply_markup)
         local success, res = api.request(config.endpoint .. api.token .. '/sendDocument', {
             ['chat_id'] = chat_id,
             ['message_thread_id'] = opts.message_thread_id,
@@ -372,7 +356,7 @@ return function(api)
             ['disable_content_type_detection'] = opts.disable_content_type_detection,
             ['disable_notification'] = opts.disable_notification,
             ['protect_content'] = opts.protect_content,
-            ['suggested_post_parameters'] = json_enc(opts.suggested_post_parameters),
+            ['suggested_post_parameters'] = api._json_enc(opts.suggested_post_parameters),
             ['reply_parameters'] = reply_parameters,
             ['reply_markup'] = reply_markup,
             ['business_connection_id'] = opts.business_connection_id,
@@ -403,11 +387,11 @@ return function(api)
     function api.send_video(chat_id, video, opts)
         opts = opts or {}
         local caption_entities = opts.caption_entities
-        caption_entities = type(caption_entities) == 'table' and json.encode(caption_entities) or caption_entities
+        caption_entities = api._json_enc(caption_entities)
         local reply_parameters = opts.reply_parameters
-        reply_parameters = type(reply_parameters) == 'table' and json.encode(reply_parameters) or reply_parameters
+        reply_parameters = api._json_enc(reply_parameters)
         local reply_markup = opts.reply_markup
-        reply_markup = type(reply_markup) == 'table' and json.encode(reply_markup) or reply_markup
+        reply_markup = api._json_enc(reply_markup)
         local success, res = api.request(config.endpoint .. api.token .. '/sendVideo', {
             ['chat_id'] = chat_id,
             ['message_thread_id'] = opts.message_thread_id,
@@ -423,7 +407,7 @@ return function(api)
             ['supports_streaming'] = opts.supports_streaming,
             ['disable_notification'] = opts.disable_notification,
             ['protect_content'] = opts.protect_content,
-            ['suggested_post_parameters'] = json_enc(opts.suggested_post_parameters),
+            ['suggested_post_parameters'] = api._json_enc(opts.suggested_post_parameters),
             ['reply_parameters'] = reply_parameters,
             ['reply_markup'] = reply_markup,
             ['business_connection_id'] = opts.business_connection_id,
@@ -452,11 +436,11 @@ return function(api)
     function api.send_animation(chat_id, animation, opts)
         opts = opts or {}
         local caption_entities = opts.caption_entities
-        caption_entities = type(caption_entities) == 'table' and json.encode(caption_entities) or caption_entities
+        caption_entities = api._json_enc(caption_entities)
         local reply_parameters = opts.reply_parameters
-        reply_parameters = type(reply_parameters) == 'table' and json.encode(reply_parameters) or reply_parameters
+        reply_parameters = api._json_enc(reply_parameters)
         local reply_markup = opts.reply_markup
-        reply_markup = type(reply_markup) == 'table' and json.encode(reply_markup) or reply_markup
+        reply_markup = api._json_enc(reply_markup)
         local success, res = api.request(config.endpoint .. api.token .. '/sendAnimation', {
             ['chat_id'] = chat_id,
             ['message_thread_id'] = opts.message_thread_id,
@@ -471,7 +455,7 @@ return function(api)
             ['has_spoiler'] = opts.has_spoiler,
             ['disable_notification'] = opts.disable_notification,
             ['protect_content'] = opts.protect_content,
-            ['suggested_post_parameters'] = json_enc(opts.suggested_post_parameters),
+            ['suggested_post_parameters'] = api._json_enc(opts.suggested_post_parameters),
             ['reply_parameters'] = reply_parameters,
             ['reply_markup'] = reply_markup,
             ['business_connection_id'] = opts.business_connection_id,
@@ -498,11 +482,11 @@ return function(api)
     function api.send_voice(chat_id, voice, opts)
         opts = opts or {}
         local caption_entities = opts.caption_entities
-        caption_entities = type(caption_entities) == 'table' and json.encode(caption_entities) or caption_entities
+        caption_entities = api._json_enc(caption_entities)
         local reply_parameters = opts.reply_parameters
-        reply_parameters = type(reply_parameters) == 'table' and json.encode(reply_parameters) or reply_parameters
+        reply_parameters = api._json_enc(reply_parameters)
         local reply_markup = opts.reply_markup
-        reply_markup = type(reply_markup) == 'table' and json.encode(reply_markup) or reply_markup
+        reply_markup = api._json_enc(reply_markup)
         local success, res = api.request(config.endpoint .. api.token .. '/sendVoice', {
             ['chat_id'] = chat_id,
             ['message_thread_id'] = opts.message_thread_id,
@@ -513,7 +497,7 @@ return function(api)
             ['duration'] = opts.duration,
             ['disable_notification'] = opts.disable_notification,
             ['protect_content'] = opts.protect_content,
-            ['suggested_post_parameters'] = json_enc(opts.suggested_post_parameters),
+            ['suggested_post_parameters'] = api._json_enc(opts.suggested_post_parameters),
             ['reply_parameters'] = reply_parameters,
             ['reply_markup'] = reply_markup,
             ['business_connection_id'] = opts.business_connection_id,
@@ -538,9 +522,9 @@ return function(api)
     function api.send_video_note(chat_id, video_note, opts)
         opts = opts or {}
         local reply_parameters = opts.reply_parameters
-        reply_parameters = type(reply_parameters) == 'table' and json.encode(reply_parameters) or reply_parameters
+        reply_parameters = api._json_enc(reply_parameters)
         local reply_markup = opts.reply_markup
-        reply_markup = type(reply_markup) == 'table' and json.encode(reply_markup) or reply_markup
+        reply_markup = api._json_enc(reply_markup)
         local success, res = api.request(config.endpoint .. api.token .. '/sendVideoNote', {
             ['chat_id'] = chat_id,
             ['message_thread_id'] = opts.message_thread_id,
@@ -549,7 +533,7 @@ return function(api)
             ['length'] = opts.length,
             ['disable_notification'] = opts.disable_notification,
             ['protect_content'] = opts.protect_content,
-            ['suggested_post_parameters'] = json_enc(opts.suggested_post_parameters),
+            ['suggested_post_parameters'] = api._json_enc(opts.suggested_post_parameters),
             ['reply_parameters'] = reply_parameters,
             ['reply_markup'] = reply_markup,
             ['business_connection_id'] = opts.business_connection_id,
@@ -573,9 +557,9 @@ return function(api)
     -- @return table,number the response object and HTTP status
     function api.send_media_group(chat_id, media, opts)
         opts = opts or {}
-        media = type(media) == 'table' and json.encode(media) or media
+        media = api._json_enc(media)
         local reply_parameters = opts.reply_parameters
-        reply_parameters = type(reply_parameters) == 'table' and json.encode(reply_parameters) or reply_parameters
+        reply_parameters = api._json_enc(reply_parameters)
         local success, res = api.request(config.endpoint .. api.token .. '/sendMediaGroup', {
             ['chat_id'] = chat_id,
             ['message_thread_id'] = opts.message_thread_id,
@@ -605,9 +589,9 @@ return function(api)
     function api.send_location(chat_id, latitude, longitude, opts)
         opts = opts or {}
         local reply_parameters = opts.reply_parameters
-        reply_parameters = type(reply_parameters) == 'table' and json.encode(reply_parameters) or reply_parameters
+        reply_parameters = api._json_enc(reply_parameters)
         local reply_markup = opts.reply_markup
-        reply_markup = type(reply_markup) == 'table' and json.encode(reply_markup) or reply_markup
+        reply_markup = api._json_enc(reply_markup)
         local success, res = api.request(config.endpoint .. api.token .. '/sendLocation', {
             ['chat_id'] = chat_id,
             ['message_thread_id'] = opts.message_thread_id,
@@ -620,7 +604,7 @@ return function(api)
             ['proximity_alert_radius'] = opts.proximity_alert_radius,
             ['disable_notification'] = opts.disable_notification,
             ['protect_content'] = opts.protect_content,
-            ['suggested_post_parameters'] = json_enc(opts.suggested_post_parameters),
+            ['suggested_post_parameters'] = api._json_enc(opts.suggested_post_parameters),
             ['reply_parameters'] = reply_parameters,
             ['reply_markup'] = reply_markup,
             ['business_connection_id'] = opts.business_connection_id,
@@ -646,9 +630,9 @@ return function(api)
     function api.send_venue(chat_id, latitude, longitude, title, address, opts)
         opts = opts or {}
         local reply_parameters = opts.reply_parameters
-        reply_parameters = type(reply_parameters) == 'table' and json.encode(reply_parameters) or reply_parameters
+        reply_parameters = api._json_enc(reply_parameters)
         local reply_markup = opts.reply_markup
-        reply_markup = type(reply_markup) == 'table' and json.encode(reply_markup) or reply_markup
+        reply_markup = api._json_enc(reply_markup)
         local success, res = api.request(config.endpoint .. api.token .. '/sendVenue', {
             ['chat_id'] = chat_id,
             ['message_thread_id'] = opts.message_thread_id,
@@ -663,7 +647,7 @@ return function(api)
             ['google_place_type'] = opts.google_place_type,
             ['disable_notification'] = opts.disable_notification,
             ['protect_content'] = opts.protect_content,
-            ['suggested_post_parameters'] = json_enc(opts.suggested_post_parameters),
+            ['suggested_post_parameters'] = api._json_enc(opts.suggested_post_parameters),
             ['reply_parameters'] = reply_parameters,
             ['reply_markup'] = reply_markup,
             ['business_connection_id'] = opts.business_connection_id,
@@ -686,9 +670,9 @@ return function(api)
     function api.send_contact(chat_id, phone_number, first_name, opts)
         opts = opts or {}
         local reply_parameters = opts.reply_parameters
-        reply_parameters = type(reply_parameters) == 'table' and json.encode(reply_parameters) or reply_parameters
+        reply_parameters = api._json_enc(reply_parameters)
         local reply_markup = opts.reply_markup
-        reply_markup = type(reply_markup) == 'table' and json.encode(reply_markup) or reply_markup
+        reply_markup = api._json_enc(reply_markup)
         local success, res = api.request(config.endpoint .. api.token .. '/sendContact', {
             ['chat_id'] = chat_id,
             ['message_thread_id'] = opts.message_thread_id,
@@ -699,7 +683,7 @@ return function(api)
             ['vcard'] = opts.vcard,
             ['disable_notification'] = opts.disable_notification,
             ['protect_content'] = opts.protect_content,
-            ['suggested_post_parameters'] = json_enc(opts.suggested_post_parameters),
+            ['suggested_post_parameters'] = api._json_enc(opts.suggested_post_parameters),
             ['reply_parameters'] = reply_parameters,
             ['reply_markup'] = reply_markup,
             ['business_connection_id'] = opts.business_connection_id,
@@ -725,25 +709,25 @@ return function(api)
     -- @return table,number the response object and HTTP status
     function api.send_poll(chat_id, question, options, opts)
         opts = opts or {}
-        options = type(options) == 'table' and json.encode(options) or options
+        options = api._json_enc(options)
         local question_entities = opts.question_entities
-        question_entities = type(question_entities) == 'table' and json.encode(question_entities) or question_entities
+        question_entities = api._json_enc(question_entities)
         local explanation_entities = opts.explanation_entities
-        explanation_entities = type(explanation_entities) == 'table' and json.encode(explanation_entities) or explanation_entities
+        explanation_entities = api._json_enc(explanation_entities)
         local description_entities = opts.description_entities
-        description_entities = type(description_entities) == 'table' and json.encode(description_entities) or description_entities
+        description_entities = api._json_enc(description_entities)
         local reply_parameters = opts.reply_parameters
-        reply_parameters = type(reply_parameters) == 'table' and json.encode(reply_parameters) or reply_parameters
+        reply_parameters = api._json_enc(reply_parameters)
         local reply_markup = opts.reply_markup
-        reply_markup = type(reply_markup) == 'table' and json.encode(reply_markup) or reply_markup
+        reply_markup = api._json_enc(reply_markup)
         local correct_option_ids = opts.correct_option_ids
-        correct_option_ids = type(correct_option_ids) == 'table' and json.encode(correct_option_ids) or correct_option_ids
+        correct_option_ids = api._json_enc(correct_option_ids)
         local media = opts.media
-        media = type(media) == 'table' and json.encode(media) or media
+        media = api._json_enc(media)
         local explanation_media = opts.explanation_media
-        explanation_media = type(explanation_media) == 'table' and json.encode(explanation_media) or explanation_media
+        explanation_media = api._json_enc(explanation_media)
         local country_codes = opts.country_codes
-        country_codes = type(country_codes) == 'table' and json.encode(country_codes) or country_codes
+        country_codes = api._json_enc(country_codes)
         local success, res = api.request(config.endpoint .. api.token .. '/sendPoll', {
             ['chat_id'] = chat_id,
             ['message_thread_id'] = opts.message_thread_id,
@@ -795,9 +779,9 @@ return function(api)
     function api.send_dice(chat_id, opts)
         opts = opts or {}
         local reply_parameters = opts.reply_parameters
-        reply_parameters = type(reply_parameters) == 'table' and json.encode(reply_parameters) or reply_parameters
+        reply_parameters = api._json_enc(reply_parameters)
         local reply_markup = opts.reply_markup
-        reply_markup = type(reply_markup) == 'table' and json.encode(reply_markup) or reply_markup
+        reply_markup = api._json_enc(reply_markup)
         local success, res = api.request(config.endpoint .. api.token .. '/sendDice', {
             ['chat_id'] = chat_id,
             ['message_thread_id'] = opts.message_thread_id,
@@ -805,7 +789,7 @@ return function(api)
             ['emoji'] = opts.emoji,
             ['disable_notification'] = opts.disable_notification,
             ['protect_content'] = opts.protect_content,
-            ['suggested_post_parameters'] = json_enc(opts.suggested_post_parameters),
+            ['suggested_post_parameters'] = api._json_enc(opts.suggested_post_parameters),
             ['reply_parameters'] = reply_parameters,
             ['reply_markup'] = reply_markup,
             ['business_connection_id'] = opts.business_connection_id,
@@ -844,7 +828,7 @@ return function(api)
     function api.set_message_reaction(chat_id, message_id, opts)
         opts = opts or {}
         local reaction = opts.reaction
-        reaction = type(reaction) == 'table' and json.encode(reaction) or reaction
+        reaction = api._json_enc(reaction)
         local success, res = api.request(config.endpoint .. api.token .. '/setMessageReaction', {
             ['chat_id'] = chat_id,
             ['message_id'] = message_id,
@@ -902,13 +886,13 @@ return function(api)
     -- @return table,number the response object and HTTP status
     function api.send_paid_media(chat_id, star_count, media, opts)
         opts = opts or {}
-        media = type(media) == 'table' and json.encode(media) or media
+        media = api._json_enc(media)
         local caption_entities = opts.caption_entities
-        caption_entities = type(caption_entities) == 'table' and json.encode(caption_entities) or caption_entities
+        caption_entities = api._json_enc(caption_entities)
         local reply_parameters = opts.reply_parameters
-        reply_parameters = type(reply_parameters) == 'table' and json.encode(reply_parameters) or reply_parameters
+        reply_parameters = api._json_enc(reply_parameters)
         local reply_markup = opts.reply_markup
-        reply_markup = type(reply_markup) == 'table' and json.encode(reply_markup) or reply_markup
+        reply_markup = api._json_enc(reply_markup)
         local success, res = api.request(config.endpoint .. api.token .. '/sendPaidMedia', {
             ['chat_id'] = chat_id,
             ['direct_messages_topic_id'] = opts.direct_messages_topic_id,
@@ -920,7 +904,7 @@ return function(api)
             ['show_caption_above_media'] = opts.show_caption_above_media,
             ['disable_notification'] = opts.disable_notification,
             ['protect_content'] = opts.protect_content,
-            ['suggested_post_parameters'] = json_enc(opts.suggested_post_parameters),
+            ['suggested_post_parameters'] = api._json_enc(opts.suggested_post_parameters),
             ['reply_parameters'] = reply_parameters,
             ['reply_markup'] = reply_markup,
             ['business_connection_id'] = opts.business_connection_id,
@@ -934,15 +918,15 @@ return function(api)
     function api.edit_message_text(chat_id, message_id, text, opts)
         opts = opts or {}
         local entities = opts.entities
-        entities = type(entities) == 'table' and json.encode(entities) or entities
+        entities = api._json_enc(entities)
         local link_preview_options = opts.link_preview_options
-        link_preview_options = type(link_preview_options) == 'table' and json.encode(link_preview_options) or link_preview_options
+        link_preview_options = api._json_enc(link_preview_options)
         local reply_markup = opts.reply_markup
-        reply_markup = type(reply_markup) == 'table' and json.encode(reply_markup) or reply_markup
+        reply_markup = api._json_enc(reply_markup)
         local parse_mode = opts.parse_mode
-        parse_mode = (type(parse_mode) == 'boolean' and parse_mode == true) and 'MarkdownV2' or parse_mode
+        parse_mode = api._normalize_parse_mode(parse_mode)
         local rich_message = opts.rich_message
-        rich_message = type(rich_message) == 'table' and json.encode(rich_message) or rich_message
+        rich_message = api._json_enc(rich_message)
         local success, res = api.request(config.endpoint .. api.token .. '/editMessageText', {
             ['chat_id'] = chat_id,
             ['message_id'] = message_id,
@@ -961,11 +945,11 @@ return function(api)
     function api.edit_message_caption(chat_id, message_id, opts)
         opts = opts or {}
         local caption_entities = opts.caption_entities
-        caption_entities = type(caption_entities) == 'table' and json.encode(caption_entities) or caption_entities
+        caption_entities = api._json_enc(caption_entities)
         local reply_markup = opts.reply_markup
-        reply_markup = type(reply_markup) == 'table' and json.encode(reply_markup) or reply_markup
+        reply_markup = api._json_enc(reply_markup)
         local parse_mode = opts.parse_mode
-        parse_mode = (type(parse_mode) == 'boolean' and parse_mode == true) and 'MarkdownV2' or parse_mode
+        parse_mode = api._normalize_parse_mode(parse_mode)
         local success, res = api.request(config.endpoint .. api.token .. '/editMessageCaption', {
             ['chat_id'] = chat_id,
             ['message_id'] = message_id,
@@ -983,8 +967,8 @@ return function(api)
     function api.edit_message_media(chat_id, message_id, media, opts)
         opts = opts or {}
         local reply_markup = opts.reply_markup
-        reply_markup = type(reply_markup) == 'table' and json.encode(reply_markup) or reply_markup
-        media = type(media) == 'table' and json.encode(media) or media
+        reply_markup = api._json_enc(reply_markup)
+        media = api._json_enc(media)
         local success, res = api.request(config.endpoint .. api.token .. '/editMessageMedia', {
             ['chat_id'] = chat_id,
             ['message_id'] = message_id,
@@ -999,7 +983,7 @@ return function(api)
     function api.edit_message_reply_markup(chat_id, message_id, opts)
         opts = opts or {}
         local reply_markup = opts.reply_markup
-        reply_markup = type(reply_markup) == 'table' and json.encode(reply_markup) or reply_markup
+        reply_markup = api._json_enc(reply_markup)
         local success, res = api.request(config.endpoint .. api.token .. '/editMessageReplyMarkup', {
             ['chat_id'] = chat_id,
             ['message_id'] = message_id,
@@ -1013,7 +997,7 @@ return function(api)
     function api.edit_message_live_location(chat_id, message_id, latitude, longitude, opts)
         opts = opts or {}
         local reply_markup = opts.reply_markup
-        reply_markup = type(reply_markup) == 'table' and json.encode(reply_markup) or reply_markup
+        reply_markup = api._json_enc(reply_markup)
         local success, res = api.request(config.endpoint .. api.token .. '/editMessageLiveLocation', {
             ['chat_id'] = chat_id,
             ['message_id'] = message_id,
@@ -1033,7 +1017,7 @@ return function(api)
     function api.stop_message_live_location(chat_id, message_id, opts)
         opts = opts or {}
         local reply_markup = opts.reply_markup
-        reply_markup = type(reply_markup) == 'table' and json.encode(reply_markup) or reply_markup
+        reply_markup = api._json_enc(reply_markup)
         local success, res = api.request(config.endpoint .. api.token .. '/stopMessageLiveLocation', {
             ['chat_id'] = chat_id,
             ['message_id'] = message_id,
@@ -1047,7 +1031,7 @@ return function(api)
     function api.stop_poll(chat_id, message_id, opts)
         opts = opts or {}
         local reply_markup = opts.reply_markup
-        reply_markup = type(reply_markup) == 'table' and json.encode(reply_markup) or reply_markup
+        reply_markup = api._json_enc(reply_markup)
         local success, res = api.request(config.endpoint .. api.token .. '/stopPoll', {
             ['chat_id'] = chat_id,
             ['message_id'] = message_id,
@@ -1066,7 +1050,7 @@ return function(api)
     end
 
     function api.delete_messages(chat_id, message_ids)
-        message_ids = type(message_ids) == 'table' and json.encode(message_ids) or message_ids
+        message_ids = api._json_enc(message_ids)
         local success, res = api.request(config.endpoint .. api.token .. '/deleteMessages', {
             ['chat_id'] = chat_id,
             ['message_ids'] = message_ids

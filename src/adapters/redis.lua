@@ -118,7 +118,20 @@ return function(api)
                 end
                 local result = {}
                 for i = 1, count do
-                    result[i] = read_response(sock_handle)
+                    local element, element_err = read_response(sock_handle)
+                    if element == nil then
+                        if element_err then
+                            -- a transport/protocol failure mid-array leaves the
+                            -- stream desynced; surface the error instead of
+                            -- returning a partial array as success.
+                            return nil, element_err
+                        end
+                        -- a null bulk ($-1) inside an array is represented as
+                        -- false: a nil hole would truncate #result and make
+                        -- later elements unreachable via ipairs.
+                        element = false
+                    end
+                    result[i] = element
                 end
                 return result
             else
@@ -196,7 +209,10 @@ return function(api)
                 if not ok_reconnect then
                     return nil, cmd_err
                 end
-                return exec_once(self._sock, ...)
+                -- trim exec_once's third return (transport_failed) so it
+                -- never leaks into the public (value, err) signature.
+                local retry_value, retry_err = exec_once(self._sock, ...)
+                return retry_value, retry_err
             end
             return value, cmd_err
         end
@@ -506,11 +522,11 @@ return function(api)
 
         function conn:is_connected()
             if not self._sock then return false end
-            local ping_ok = pcall(function()
-                send_command(self._sock, 'PING')
-                read_response(self._sock)
-            end)
-            return ping_ok
+            -- send/receive report failure via (nil, err) rather than raising,
+            -- so the result must actually be checked: a dead socket used to
+            -- make this return true.
+            local value = exec_once(self._sock, 'PING')
+            return value == 'PONG'
         end
 
         return conn

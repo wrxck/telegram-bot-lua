@@ -13,7 +13,7 @@ return function(api)
     function api.answer_inline_query(inline_query_id, results, opts)
         opts = opts or {}
         local button = opts.button
-        button = type(button) == 'table' and json.encode(button) or button
+        button = api._json_enc(button)
         if results and type(results) == 'table' then
             if results.id then
                 results = {results}
@@ -37,7 +37,7 @@ return function(api)
     -- @return table|false the sent message, or false on failure
     -- @return string|table the HTTP status or error details
     function api.answer_web_app_query(web_app_query_id, result)
-        result = type(result) == 'table' and json.encode(result) or result
+        result = api._json_enc(result)
         local success, res = api.request(config.endpoint .. api.token .. '/answerWebAppQuery', {
             ['web_app_query_id'] = web_app_query_id,
             ['result'] = result
@@ -51,7 +51,7 @@ return function(api)
     -- @return table|false the sent message, or false on failure
     -- @return string|table the HTTP status or error details
     function api.answer_guest_query(guest_query_id, result)
-        result = type(result) == 'table' and json.encode(result) or result
+        result = api._json_enc(result)
         local success, res = api.request(config.endpoint .. api.token .. '/answerGuestQuery', {
             ['guest_query_id'] = guest_query_id,
             ['result'] = result
@@ -173,7 +173,7 @@ return function(api)
     -- @return string|table the HTTP status or error details
     function api.save_prepared_inline_message(user_id, result, opts)
         opts = opts or {}
-        result = type(result) == 'table' and json.encode(result) or result
+        result = api._json_enc(result)
         local success, res = api.request(config.endpoint .. api.token .. '/savePreparedInlineMessage', {
             ['user_id'] = user_id,
             ['result'] = result,

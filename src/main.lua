@@ -64,26 +64,64 @@ function api.configure(token, debug)
     return api
 end
 
---- send a request to the telegram bot API.
--- encodes parameters as multipart form data and handles file uploads.
--- @param endpoint string the full API endpoint URL
--- @param parameters table optional request parameters
--- @param file table optional file attachments keyed by type
--- @return table|false the decoded JSON response, or false on failure
--- @return string|table the HTTP status or error details
-function api._http_request(endpoint, parameters, file)
-    assert(endpoint, 'You must specify an endpoint to make this request to!')
+-- encode a table-valued API parameter as JSON, passing scalars through.
+-- the standard coercion for every table parameter the bot API expects as a
+-- serialized JSON string (reply_markup, entities, options, ...).
+function api._json_enc(value)
+    return type(value) == 'table' and json.encode(value) or value
+end
+
+-- normalize the boolean parse_mode shorthand: true means 'MarkdownV2', and
+-- false means "no parse mode" (the parameter is omitted rather than being
+-- sent as the string "false").
+function api._normalize_parse_mode(parse_mode)
+    if type(parse_mode) == 'boolean' then
+        return parse_mode and 'MarkdownV2' or nil
+    end
+    return parse_mode
+end
+
+-- truncate a string parameter to the API's maximum length. nil passes
+-- through untouched so optional parameters stay omitted rather than being
+-- sent as the literal string "nil".
+function api._truncate(value, max_length)
+    if value == nil then
+        return nil
+    end
+    value = tostring(value)
+    if #value > max_length then
+        value = value:sub(1, max_length)
+    end
+    return value
+end
+
+--- decode a JSON string without raising.
+-- dkjson can throw on some malformed inputs (e.g. the empty string with
+-- dkjson >= 2.8), and callers in the request/webhook layers promise to
+-- return (false, err) rather than raise.
+-- @param jstr string the JSON text to decode
+-- @return any|nil the decoded value, or nil if decoding failed
+function api._json_decode(jstr)
+    local pok, jdat = pcall(json.decode, jstr)
+    if not pok then
+        return nil
+    end
+    return jdat
+end
+
+-- build the multipart parameter table for a request: shallow-copy the
+-- caller's table (never mutate it), stringify scalars, merge file uploads,
+-- and fall back to the {''} sentinel multipart-post needs for empty bodies.
+-- shared by the sync (ssl.https) and async (copas.http) request paths.
+function api._build_request_params(parameters, file)
     parameters = parameters or {}
-    -- work on a shallow copy so we never mutate the caller's table; stringify
-    -- scalars for multipart encoding but leave tables (file parts) untouched.
     local params = {}
     for k, v in pairs(parameters) do
         params[k] = type(v) == 'table' and v or tostring(v)
     end
-    parameters = params
     if api.debug then
         local safe = {}
-        for k, v in pairs(parameters) do safe[k] = v end
+        for k, v in pairs(params) do safe[k] = v end
         local output = json.encode(safe, { ['indent'] = true })
         print(output)
     end
@@ -92,27 +130,54 @@ function api._http_request(endpoint, parameters, file)
             if type(file_name) == 'string' then
                 local file_res = io.open(file_name, 'rb')
                 if file_res then
-                    parameters[file_type] = {
+                    params[file_type] = {
                         filename = file_name,
                         data = file_res:read('*a')
                     }
                     file_res:close()
                 else
-                    parameters[file_type] = file_name
+                    params[file_type] = file_name
                 end
             else
-                parameters[file_type] = file_name
+                params[file_type] = file_name
             end
         end
     end
-    parameters = next(parameters) == nil and {''} or parameters
+    if next(params) == nil then
+        return {''}
+    end
+    return params
+end
+
+-- decode and validate a telegram API response body, mirroring the request
+-- contract: (jdat, res) on success, (false, err) on any failure.
+function api._parse_api_response(jstr, res)
+    local jdat = api._json_decode(jstr)
+    if type(jdat) ~= 'table' then
+        return false, { ['ok'] = false, ['description'] = 'failed to decode API response', ['body'] = jstr }
+    elseif not jdat.ok then
+        if api.debug then
+            local output = '\n' .. tostring(jdat.description) .. ' [' .. tostring(jdat.error_code) .. ']\n'
+            print(output)
+        end
+        return false, jdat
+    end
+    return jdat, res
+end
+
+-- shared request core: encode parameters, POST via the given http client
+-- (ssl.https or copas.http), and parse the response. `log_error` receives
+-- connection-level failures so each path keeps its own logging style.
+function api._request_core(client_request, log_error, endpoint, parameters, file)
+    assert(endpoint, 'You must specify an endpoint to make this request to!')
+    parameters = api._build_request_params(parameters, file)
     local response = {}
     local body, boundary = multipart.encode(parameters)
-    -- luasec can raise on transient ssl / socket faults (peer closed mid-read,
-    -- handshake aborted, dns blip). historically these propagated as lua errors
-    -- and tore down the polling loop. wrap so the caller always gets a
-    -- (false, err) return and can decide whether to retry.
-    local pok, success, res = pcall(https.request, {
+    -- the http client can raise on transient ssl / socket faults (peer closed
+    -- mid-read, handshake aborted, dns blip). historically these propagated as
+    -- lua errors and tore down the polling loop. wrap so the caller always
+    -- gets a (false, err) return and can decide whether to retry.
+    local pok, success, res = pcall(client_request, {
         ['url'] = endpoint,
         ['method'] = 'POST',
         ['headers'] = {
@@ -123,25 +188,27 @@ function api._http_request(endpoint, parameters, file)
         ['sink'] = ltn12.sink.table(response)
     })
     if not pok then
-        api.log.warn('connection error:', success)
+        log_error(success)
         return false, success
     end
     if not success then
-        api.log.warn('connection error:', res)
+        log_error(res)
         return false, res
     end
-    local jstr = table.concat(response)
-    local jdat = json.decode(jstr)
-    if not jdat then
-        return false, { ['ok'] = false, ['description'] = 'failed to decode API response', ['body'] = jstr }
-    elseif not jdat.ok then
-        if api.debug then
-            local output = '\n' .. tostring(jdat.description) .. ' [' .. tostring(jdat.error_code) .. ']\n'
-            print(output)
-        end
-        return false, jdat
-    end
-    return jdat, res
+    return api._parse_api_response(table.concat(response), res)
+end
+
+--- send a request to the telegram bot API.
+-- encodes parameters as multipart form data and handles file uploads.
+-- @param endpoint string the full API endpoint URL
+-- @param parameters table optional request parameters
+-- @param file table optional file attachments keyed by type
+-- @return table|false the decoded JSON response, or false on failure
+-- @return string|table the HTTP status or error details
+function api._http_request(endpoint, parameters, file)
+    return api._request_core(https.request, function(err)
+        api.log.warn('connection error:', err)
+    end, endpoint, parameters, file)
 end
 
 --- retry policy for api.request. honours telegram's 429 retry_after (required
@@ -155,7 +222,9 @@ api.retry = {
 }
 
 -- default blocking sleeper; the async layer passes copas.sleep instead.
-local function blocking_sleep(seconds)
+-- prefers socket.select-backed socket.sleep (no shell spawn) and falls back
+-- to `sleep(1)` via the shell. also used by the sync polling loop's backoff.
+function api._blocking_sleep(seconds)
     local ok, socket = pcall(require, 'socket')
     if ok and socket and socket.sleep then
         socket.sleep(seconds)
@@ -183,7 +252,7 @@ end
 -- @param sleeper function optional sleep(seconds); defaults to a blocking sleep
 -- @return table|false result and error, identical to the thunk's contract
 function api._with_retry(thunk, sleeper)
-    sleeper = sleeper or blocking_sleep
+    sleeper = sleeper or api._blocking_sleep
     if not (api.retry and api.retry.enabled) then
         return thunk()
     end
