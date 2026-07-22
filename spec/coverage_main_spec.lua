@@ -150,9 +150,8 @@ describe('main.lua coverage', function()
         end)
 
         it('loads a real file from disk into filename/data form', function()
-            local dir = os.getenv('TMPDIR') or '/tmp/claude-0/-home-user-telegram-bot-lua/556c4575-a1af-5039-bc38-a4cd94c5ea0d/scratchpad'
-            os.execute("mkdir -p '" .. dir .. "'")
-            local path = dir .. '/coverage_upload.txt'
+            local dir = os.getenv('TMPDIR') or '/tmp'
+            local path = dir .. '/tbl_coverage_upload.txt'
             local f = assert(io.open(path, 'wb'))
             f:write('file payload bytes')
             f:close()
